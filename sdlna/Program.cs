@@ -64,6 +64,7 @@ namespace NMaier.SimpleDlna
 
     private static void Main(string[] args)
     {
+      log4net.Config.XmlConfigurator.Configure();
       Console.WriteLine();
       var options = new Options();
       try {
