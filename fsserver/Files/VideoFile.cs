@@ -64,7 +64,8 @@ namespace NMaier.SimpleDlna.FileMediaServer
         bookmark = 0;
       }
       try {
-        subTitle = info.GetValue("st", typeof(Subtitle)) as Subtitle;
+        //subTitle = info.GetValue("st", typeof(Subtitle)) as Subtitle;
+        subTitle = new Subtitle(new System.IO.FileInfo(this.Path));
       }
       catch (Exception) {
         subTitle = null;

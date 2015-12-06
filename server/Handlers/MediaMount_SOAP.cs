@@ -105,6 +105,40 @@ namespace NMaier.SimpleDlna.Server
       }
     }
 
+
+    private void AddSubtitle(IRequest request, IMediaResource resource,
+                      XmlElement item)
+    {
+      var result = item.OwnerDocument;
+      var video = resource as IMediaVideoResource;
+      if (video == null)
+      {
+        return;
+      }
+      try
+      {
+        if (video.Subtitle.HasSubtitle)
+        {
+          var subtitle = result.CreateElement(string.Empty, "res", NS_DIDL);
+          subtitle.InnerText = String.Format(
+              "http://{0}:{1}{2}subtitle/{3}/st.srt",
+              request.LocalEndPoint.Address,
+              request.LocalEndPoint.Port,
+              prefix,
+              resource.Id
+          );
+          subtitle.SetAttribute("protocolInfo", "http-get:*:text/srt:*");
+          item.AppendChild(subtitle);
+        }
+      }
+      catch (Exception)
+      {
+        return;
+      }
+    }
+
+
+
     private static void AddGeneralProperties(IHeaders props, XmlElement item)
     {
       var prop = string.Empty;
@@ -283,7 +317,20 @@ namespace NMaier.SimpleDlna.Server
         resource.PN, DlnaMaps.Mime[resource.Type], DlnaMaps.DefaultStreaming
         ));
       item.AppendChild(res);
+      /*
+            var subtitle = result.CreateElement(string.Empty, "res", NS_DIDL);
+                  subtitle.InnerText = String.Format(
+                "http://{0}:{1}{2}subtitle/{3}/st.srt",
+                request.LocalEndPoint.Address,
+                request.LocalEndPoint.Port,
+                prefix,
+                resource.Id
+            );
+            subtitle.SetAttribute("protocolInfo", "http-get:*:text/srt:*");
 
+            item.AppendChild(subtitle);
+      */
+      AddSubtitle(request, resource, item);
       AddCover(request, resource, item);
       result.DocumentElement.AppendChild(item);
     }

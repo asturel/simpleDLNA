@@ -162,7 +162,7 @@ namespace NMaier.SimpleDlna.Server
             if (!sti.Exists) {
               continue;
             }
-            text = FFmpeg.GetSubtitleSubrip(sti);
+            text = System.IO.File.ReadAllText(sti.FullName,System.Text.Encoding.Default); //FFmpeg.GetSubtitleSubrip(sti);
           }
           catch (NotSupportedException) {
           }
@@ -172,7 +172,7 @@ namespace NMaier.SimpleDlna.Server
           }
         }
         try {
-          text = FFmpeg.GetSubtitleSubrip(file);
+          //text = FFmpeg.GetSubtitleSubrip(file);
         }
         catch (NotSupportedException) {
         }
