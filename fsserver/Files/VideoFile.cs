@@ -31,7 +31,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
 
     private Subtitle subTitle;
 
-    public string title;
+    private string title;
 
     private int? width;
 
