@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
+using System.Xml.Linq;
+using System.Linq;
 using System.IO.Compression;
 using System.Text.RegularExpressions;
 namespace NMaier
@@ -22,6 +24,8 @@ namespace NMaier
     public string Name { get; set; }
 
     public List<TVEpisode> TVEpisodes { get; set; }
+
+    public long LastUpdated { get; set; }
 
     public TVShowInfo()
     {
@@ -106,6 +110,7 @@ namespace NMaier
             entry = new TVShowInfo();
             entry.ID = showid;
             entry.Name = xmlDoc.SelectSingleNode("//SeriesName").InnerText;
+            entry.LastUpdated = System.Int64.Parse(xmlDoc.SelectSingleNode(".//lastupdated").InnerText);
             entry.TVEpisodes = new List<TVEpisode>();
 
             var episodes = xmlDoc.SelectNodes("//Episode");
@@ -117,14 +122,13 @@ namespace NMaier
               var seasonnum = ep.SelectSingleNode(".//Combined_season").InnerText;
               var title = ep.SelectSingleNode(".//EpisodeName").InnerText;
 
-              seasoninfo.Episode = (int)Math.Ceiling(System.Double.Parse(epnum, new System.Globalization.CultureInfo("en-IS")));
-              seasoninfo.Season = (int)Math.Ceiling(System.Double.Parse(seasonnum, new System.Globalization.CultureInfo("en-IS")));
-              seasoninfo.Title = title;
 
+              seasoninfo.Episode = (int)Math.Ceiling(System.Double.Parse(epnum, new System.Globalization.CultureInfo("en-US")));
+              seasoninfo.Season = (int)Math.Ceiling(System.Double.Parse(seasonnum, new System.Globalization.CultureInfo("en-US")));
+              seasoninfo.Title = title;
               entry.TVEpisodes.Add(seasoninfo);
             }
-
-            cacheshow.TryAdd(showid, entry);
+            cacheshow.AddOrUpdate(showid, entry, (key, oldvalue) => (oldvalue.LastUpdated > entry.LastUpdated ? oldvalue : entry));
           }
         }
 
@@ -185,6 +189,30 @@ namespace NMaier
         return -1;
 
       }
+    }
+    public static int[] UpdatesSince(long time)
+    {
+
+      var url = String.Format("http://thetvdb.com/api/Updates.php?type=all&time={0}", time);
+      string xmlStr;
+      using (var wc = new System.Net.WebClient())
+      {
+        xmlStr = wc.DownloadString(url);
+      }
+      var xmlDoc = new System.Xml.XmlDocument();
+      xmlDoc.LoadXml(xmlStr);
+
+      var l = xmlDoc.SelectNodes("//Series").OfType<XmlNode>();
+
+      return
+        (from n in l
+         select System.Int32.Parse(n.InnerText)).ToArray();
+
+
+
+
+
+
     }
   }
 
