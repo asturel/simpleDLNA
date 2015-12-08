@@ -113,9 +113,12 @@ namespace NMaier.SimpleDlna.Server.Views
         }
       }
       foreach (var i in root.ChildItems.ToList()) {
-//        var folder = cascaded.GetFolder(i.Title.StemCompareBase().Substring(0, 1).ToUpper());
-//        folder.AddResource(i);
-        cascaded.AddResource(i);
+        //        var folder = cascaded.GetFolder(i.Title.StemCompareBase().Substring(0, 1).ToUpper());
+        //        folder.AddResource(i);
+        //        cascaded.AddResource(i);
+        var c0 = i as IMediaVideoResource;
+        var folder = cascaded.GetFolder(c0 != null ? c0.MovieTitle : i.Title);
+        folder.AddResource(i);
       }
       return cascaded;
     }
