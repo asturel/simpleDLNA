@@ -9,6 +9,19 @@ namespace NMaier.SimpleDlna.Server.Views
   {
     private bool cascade = true;
 
+    private readonly static Regex movieclear = new Regex(
+            @"(.*?)[._ ]?(([0-9]{4})|[0-9]{3,4}p)",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase
+            );
+
+    
+
+    private readonly static Regex seriesreg = new Regex(
+            //@"(([0-9]{1,2})x([0-9]{1,2})|S([0-9]{1,2})+E([0-9]{1,2}))",
+            @"(([0-9]{1,2})x([0-9]{1,2})|[ \._\-]([0-9]{3})([ \._\-]|$)|(S([0-9]{1,2})+(E([0-9]{1,2})| )))",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase
+            );
+
     private readonly static Regex re_series = new Regex(
       @"^(.+?)(?:s\d+[\s_-]*e\d+|" + // S01E10
       @"\d+[\s_-]*x[\s_-]*\d+|" + // 1x01
@@ -78,26 +91,31 @@ namespace NMaier.SimpleDlna.Server.Views
       var series = new SimpleKeyedVirtualFolder(root, "Series");
       SortFolder(root, series);
       foreach (var f in series.ChildFolders.ToList()) {
-        if (f.ChildCount < 2) {
-          foreach (var file in f.ChildItems) {
-            root.AddResource(file);
-          }
-          continue;
-        }
         var fsmi = f as VirtualFolder;
         root.AdoptFolder(fsmi);
       }
-      if (!cascade || root.ChildFolders.LongCount() <= 50) {
+      if (!cascade) {
         return root;
       }
+
       var cascaded = new DoubleKeyedVirtualFolder(root, "Series");
+
       foreach (var i in root.ChildFolders.ToList()) {
-        var folder = cascaded.GetFolder(i.Title.StemCompareBase().Substring(0, 1).ToUpper());
-        folder.AdoptFolder(i);
+        
+//        var folder = cascaded.GetFolder(i.Title.StemCompareBase().Substring(0, 1).ToUpper());
+//        folder.AdoptFolder(i);
+               
+        foreach (var c in i.ChildItems)
+        {
+          var c0 = c as IMediaVideoResource;
+          var folder = cascaded.GetFolder(c0 != null ? c0.MovieTitle : i.Title);
+          folder.AddResource(c);
+        }
       }
       foreach (var i in root.ChildItems.ToList()) {
-        var folder = cascaded.GetFolder(i.Title.StemCompareBase().Substring(0, 1).ToUpper());
-        folder.AddResource(i);
+//        var folder = cascaded.GetFolder(i.Title.StemCompareBase().Substring(0, 1).ToUpper());
+//        folder.AddResource(i);
+        cascaded.AddResource(i);
       }
       return cascaded;
     }

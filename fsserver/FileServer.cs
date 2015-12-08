@@ -48,6 +48,8 @@ namespace NMaier.SimpleDlna.FileMediaServer
 
     private FileStore store = null;
 
+    private TVStore tvStore = null;
+
     private readonly DlnaMediaTypes types;
 
     private readonly FileSystemWatcher[] watchers;
@@ -390,6 +392,13 @@ namespace NMaier.SimpleDlna.FileMediaServer
         store.MaybeStoreFile(aFile);
       }
     }
+    internal void UpdateTVCache (TVShowInfo tvinfo)
+    {
+      if (tvStore != null)
+      {
+        tvStore.Insert(tvinfo);
+      }
+    }
 
     public void Dispose()
     {
@@ -448,6 +457,17 @@ namespace NMaier.SimpleDlna.FileMediaServer
 
     public void SetCacheFile(FileInfo info)
     {
+      if (tvStore == null)
+      {
+        try
+        {
+          tvStore = new TVStore();
+        } catch (Exception ex)
+        {
+          Warn("TvStore is not available; failed to load SQLite Adapter", ex);
+        }
+      }
+      
       if (store != null) {
         store.Dispose();
         store = null;

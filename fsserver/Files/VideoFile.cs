@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization;
+using System.Text.RegularExpressions;
 
 namespace NMaier.SimpleDlna.FileMediaServer
 {
@@ -30,14 +31,31 @@ namespace NMaier.SimpleDlna.FileMediaServer
 
     private Subtitle subTitle;
 
-    private string title;
+    public string title;
 
     private int? width;
+
+    private int? tvshowid;
+
+    private string seriesname;
+
+    private bool isSeries = false;
+
+    private readonly static Regex seriesreg = new Regex(
+            //@"(([0-9]{1,2})x([0-9]{1,2})|S([0-9]{1,2})+E([0-9]{1,2}))",
+            @"(([0-9]{1,2})x([0-9]{1,2})|[ \._\-]([0-9]{3})([ \._\-]|$)|(S([0-9]{1,2})+(E([0-9]{1,2})| )))",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase
+            );
+    private readonly static Regex movieclear = new Regex(
+            @"(.*?)[._ ]?(([0-9]{4})|[0-9]{3,4}p)",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase
+            );
 
     private VideoFile(SerializationInfo info, StreamingContext ctx)
       : this(info, ctx.Context as DeserializeInfo)
     {
     }
+
 
     private VideoFile(SerializationInfo info, DeserializeInfo di)
       : this(di.Server, di.Info, di.Type)
@@ -46,7 +64,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
       description = info.GetString("de");
       director = info.GetString("di");
       genre = info.GetString("g");
-      title = info.GetString("t");
+      //title = info.GetString("t");
       try {
         width = info.GetInt32("w");
         height = info.GetInt32("h");
@@ -70,6 +88,124 @@ namespace NMaier.SimpleDlna.FileMediaServer
       catch (Exception) {
         subTitle = null;
       }
+      try {
+        this.tvshowid = info.GetInt32("tvid");
+
+        if (tvshowid == null)
+        {
+          this.tvshowid = TheTVDB.GetTVShowID(this.Path);
+        }
+        if (tvshowid != null && tvshowid > 0)
+        {
+
+          var tvinfo = TheTVDB.GetTVShowDetails(this.tvshowid.Value);
+          Server.UpdateTVCache(tvinfo);
+          this.seriesname = tvinfo.Name;
+
+          var seriesreg0 = seriesreg.Match(base.Title);               
+          if (seriesreg0.Success)
+          {
+            isSeries = true;
+            var season = 0;
+            var episode = 0;
+            if (seriesreg0.Groups[2].Value != "")
+            {
+              season = System.Int32.Parse(seriesreg0.Groups[2].Value);
+              episode = System.Int32.Parse(seriesreg0.Groups[3].Value);
+            }
+            else if (seriesreg0.Groups[6].Value != "")
+            {
+              season = System.Int32.Parse(seriesreg0.Groups[7].Value);
+              System.Int32.TryParse(seriesreg0.Groups[9].Value, out episode);
+            }
+            else if (seriesreg0.Groups[4].Value != "")
+            {
+              var seasonandep = System.Int32.Parse(seriesreg0.Groups[4].Value);
+              episode = seasonandep % 100;
+              season = (seasonandep - episode) / 100;
+            }
+            if (season > 0 && episode > 0)
+            {
+              var t = tvinfo.Find(season, episode);
+              this.title = t;
+            }
+          } else
+          {
+            this.title = tvinfo.Name;
+          }
+        }
+
+      } catch (Exception exn)
+      {
+        if (exn is System.ArgumentNullException)
+        {
+        }
+        else
+        {
+          this.tvshowid = TheTVDB.GetTVShowID(this.Path);
+        }
+
+      }
+      if (this.seriesname == null)
+      {
+        var seriesreg0 = seriesreg.Match(base.Title);
+
+        if (seriesreg0.Success)
+        {
+          var season = 0;
+          var episode = 0;
+          if (seriesreg0.Groups[2].Value != "")
+          {
+            season = System.Int32.Parse(seriesreg0.Groups[2].Value);
+            episode = System.Int32.Parse(seriesreg0.Groups[3].Value);
+          }
+          else if (seriesreg0.Groups[6].Value != "")
+          {
+            season = System.Int32.Parse(seriesreg0.Groups[7].Value);
+            System.Int32.TryParse(seriesreg0.Groups[9].Value, out episode);
+          }
+          else if (seriesreg0.Groups[4].Value != "")
+          {
+            var seasonandep = System.Int32.Parse(seriesreg0.Groups[4].Value);
+            episode = seasonandep % 100;
+            season = (seasonandep - episode) / 100;
+          }
+
+          var xx = "-";
+          if (episode > 0 && season > 0)
+          {
+            xx = String.Format("{0}x{1}", season, episode);
+          }
+          else
+          {
+            if (episode > 0)
+            {
+              xx = episode.ToString();
+            }
+            else
+            {
+              xx = season.ToString();
+            }
+          }
+          this.title = xx;
+          this.seriesname = System.IO.Directory.GetParent(this.Path).Name;
+        } else {
+          var t = movieclear.Match(System.IO.Directory.GetParent(this.Path).Name);
+          if (t.Success)
+          {
+            this.seriesname = String.Format("{0} ({1})", t.Groups[1].Value, t.Groups[3].Value);
+          }
+          else
+          {
+            this.seriesname = System.IO.Directory.GetParent(this.Path).Name;
+          }
+          this.seriesname = this.seriesname.Replace(".", " ").Replace("_", " ");
+
+
+        }
+      }
+
+      Server.UpdateFileCache(this);
       initialized = true;
     }
 
@@ -99,7 +235,24 @@ namespace NMaier.SimpleDlna.FileMediaServer
         return actors;
       }
     }
-
+    public string MovieTitle
+    {
+      get
+      {
+        if (this.seriesname != null)
+        {
+          return this.seriesname;
+        } else { return base.Title; }
+        
+      }
+    }
+    public bool IsSeries
+    {
+      get
+      {
+        return this.isSeries;
+      }
+    }
     public string MetaDescription
     {
       get
@@ -115,6 +268,15 @@ namespace NMaier.SimpleDlna.FileMediaServer
       {
         MaybeInit();
         return director;
+      }
+    }
+
+    public int? TVShowDBId
+    {
+      get
+      {
+        //MaybeInit();
+        return tvshowid;
       }
     }
 
@@ -210,8 +372,9 @@ namespace NMaier.SimpleDlna.FileMediaServer
     {
       get
       {
-        if (!string.IsNullOrWhiteSpace(title)) {
-          return string.Format("{0} — {1}", base.Title, title);
+        if (!string.IsNullOrWhiteSpace(this.title)) {
+          //return string.Format("{0} — {1}", base.Title, title);
+          return this.title;
         }
         return base.Title;
       }
@@ -222,6 +385,12 @@ namespace NMaier.SimpleDlna.FileMediaServer
       if (initialized) {
         return;
       }
+      
+      if (tvshowid == null)
+      {
+        tvshowid = TheTVDB.GetTVShowID(this.Path);
+      }
+      
 
       try {
         using (var tl = TagLib.File.Create(new TagLibFileAbstraction(Item))) {
@@ -240,7 +409,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
           try {
             var t = tl.Tag;
             genre = t.FirstGenre;
-            title = t.Title;
+            //title = t.Title;
             description = t.Comment;
             director = t.FirstComposerSort;
             if (string.IsNullOrWhiteSpace(director)) {
@@ -298,7 +467,9 @@ namespace NMaier.SimpleDlna.FileMediaServer
       info.AddValue("h", height);
       info.AddValue("b", bookmark);
       info.AddValue("du", duration.GetValueOrDefault(EmptyDuration).Ticks);
-      info.AddValue("st", subTitle);
+      //info.AddValue("st", subTitle);
+      info.AddValue("tvid", (tvshowid.HasValue ? tvshowid.Value : -1));
+      //info.AddValue("tvname", tvshow.Name);
     }
   }
 }

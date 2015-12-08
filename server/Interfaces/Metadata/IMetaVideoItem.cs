@@ -10,5 +10,8 @@ namespace NMaier.SimpleDlna.Server.Metadata
     string MetaDirector { get; }
 
     Subtitle Subtitle { get; }
+
+    string MovieTitle { get;  }
+
   }
 }
