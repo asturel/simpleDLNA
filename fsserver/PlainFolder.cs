@@ -23,7 +23,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
                  where 
                   m != null && m.ChildCount > 0 && 
                   (server.ShowSample || !d.FullName.ToLower().Contains("sample")) && 
-                  (server.ShowHidden || !d.Attributes.HasFlag(FileAttributes.Hidden))
+                  (server.ShowHidden || (!d.Attributes.HasFlag(FileAttributes.Hidden) && !d.Name.StartsWith(".")))
                  select m as IMediaFolder).ToList();
 
       var rawfiles = from f in dir.GetFiles("*.*")
@@ -37,7 +37,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
         }
         try {
           if ((server.ShowSample || !f.FullName.ToLower().Contains("sample")) &&
-            (server.ShowHidden || !f.Attributes.HasFlag(FileAttributes.Hidden))) {
+            (server.ShowHidden || (!f.Attributes.HasFlag(FileAttributes.Hidden) && !f.Name.StartsWith(".")))) {
             files.Add(server.GetFile(this, f));
           }
         }

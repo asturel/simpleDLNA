@@ -59,7 +59,13 @@ namespace NMaier.SimpleDlna.FileMediaServer
     {
       this.types = types;
       this.ids = ids;
-      this.directories = directories.Distinct().ToArray();
+      this.directories =
+        (from d in directories.Distinct()
+         where 
+             (ShowHidden || (!d.Attributes.HasFlag(FileAttributes.Hidden) && !d.Name.StartsWith("."))) &&
+             (ShowSample || !d.FullName.ToLower().Contains("sample"))
+         select d).ToArray();
+
       if (this.directories.Length == 0) {
         throw new ArgumentException(
           "Provide one or more directories",
