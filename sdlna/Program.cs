@@ -64,7 +64,6 @@ namespace NMaier.SimpleDlna
 
     private static void Main(string[] args)
     {
-      log4net.Config.XmlConfigurator.Configure();
       Console.WriteLine();
       var options = new Options();
       try {
@@ -193,6 +192,8 @@ namespace NMaier.SimpleDlna
       if (!string.IsNullOrEmpty(options.FriendlyName)) {
         fs.FriendlyName = options.FriendlyName;
       }
+      fs.ShowHidden = options.ShowHidden;
+      fs.ShowSample = options.ShowSample;
       try {
         if (options.CacheFile != null) {
           fs.SetCacheFile(options.CacheFile);

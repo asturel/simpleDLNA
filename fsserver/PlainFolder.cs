@@ -20,7 +20,10 @@ namespace NMaier.SimpleDlna.FileMediaServer
       this.dir = dir;
       folders = (from d in dir.GetDirectories()
                  let m = TryGetFolder(server, types, d)
-                 where m != null && m.ChildCount > 0
+                 where 
+                  m != null && m.ChildCount > 0 && 
+                  (server.ShowSample || !d.FullName.ToLower().Contains("sample")) && 
+                  (server.ShowHidden || !d.Attributes.HasFlag(FileAttributes.Hidden))
                  select m as IMediaFolder).ToList();
 
       var rawfiles = from f in dir.GetFiles("*.*")
@@ -33,7 +36,10 @@ namespace NMaier.SimpleDlna.FileMediaServer
           continue;
         }
         try {
-          files.Add(server.GetFile(this, f));
+          if ((server.ShowSample || !f.FullName.ToLower().Contains("sample")) &&
+            (server.ShowHidden || !f.Attributes.HasFlag(FileAttributes.Hidden))) {
+            files.Add(server.GetFile(this, f));
+          }
         }
         catch (Exception ex) {
           server.Warn(f, ex);

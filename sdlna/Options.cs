@@ -93,6 +93,14 @@ namespace NMaier.SimpleDlna
     [FlagArgument(false)]
     public bool Rescanning = true;
 
+    [Argument("showhidden", HelpText = "Show hidden files/directories")]
+    [FlagArgument(false)]
+    public bool ShowHidden = false;
+
+    [Argument("showsample", HelpText = "Show sample files/directories")]
+    [FlagArgument(false)]
+    public bool ShowSample = false;
+
     [Argument("ip", HelpText = "Allow only specified IPs", HelpVar = "IP")]
     [ShortArgument('i')]
     public string[] Ips
@@ -198,7 +206,7 @@ namespace NMaier.SimpleDlna
       else {
         BasicConfigurator.Configure(appender);
       }
-
+      XmlConfigurator.Configure();
       var repo = LogManager.GetRepository();
       var level = repo.LevelMap[LogLevel.ToUpperInvariant()];
       if (level == null) {

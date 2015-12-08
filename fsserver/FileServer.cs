@@ -100,6 +100,10 @@ namespace NMaier.SimpleDlna.FileMediaServer
 
     public string FriendlyName { get; set; }
 
+    public bool ShowHidden { get; set; }
+
+    public bool ShowSample { get; set; }
+
     public Guid Uuid
     {
       get
