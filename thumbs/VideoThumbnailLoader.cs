@@ -39,13 +39,13 @@ namespace NMaier.SimpleDlna.Thumbnails
           pump.Pump(null);
           if (!p.WaitForExit(20000)) {
             p.Kill();
-            throw new ArgumentException("ffmpeg timed out");
+            throw new System.TimeoutException("ffmpeg timed out");
           }
           if (p.ExitCode != 0) {
-            throw new ArgumentException("ffmpeg does not understand the stream");
+            throw new System.IO.InvalidDataException("ffmpeg does not understand the stream");
           }
           if (!pump.Wait(2000)) {
-            throw new ArgumentException("stream reading timed out");
+            throw new System.TimeoutException("stream reading timed out");
           }
           if (thumb.Length == 0) {
             throw new ArgumentException("ffmpeg did not produce a result");
@@ -150,6 +150,10 @@ namespace NMaier.SimpleDlna.Thumbnails
         }
         catch (Exception ex) {
           last = ex;
+          if (!(ex is System.ArgumentException))
+          {
+            throw (ex);
+          }
         }
       }
       throw last ?? new Exception("Not reached");
