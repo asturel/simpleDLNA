@@ -269,7 +269,9 @@ namespace NMaier.SimpleDlna.Server
 
       foreach (var address in IP.ExternalIPAddresses) {
         DebugFormat("Registering device for {0}", address);
-        var deviceGuid = Guid.NewGuid();
+        var lguid = 
+          new Guid(System.Text.Encoding.UTF8.GetBytes(IP.GetMAC(address).Replace(":", "") + "." + (address.Address % 256).ToString()));
+        var deviceGuid = lguid;
         var list = devicesForServers.GetOrAdd(guid, new List<Guid>());
         lock (list) {
           list.Add(deviceGuid);
