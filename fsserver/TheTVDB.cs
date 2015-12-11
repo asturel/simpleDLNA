@@ -9,6 +9,7 @@ using System.Xml.Linq;
 using System.Linq;
 using System.IO.Compression;
 using System.Text.RegularExpressions;
+using log4net;
 namespace NMaier
 {
 
@@ -17,6 +18,8 @@ namespace NMaier
     public int Season { get; set; }
     public int Episode { get; set; }
     public string Title { get; set; }
+    public DateTime FirstAired { get; set; }
+
   }
   class TVShowInfo
   {
@@ -26,6 +29,8 @@ namespace NMaier
     public List<TVEpisode> TVEpisodes { get; set; }
 
     public long LastUpdated { get; set; }
+
+    public string IMDBID { get; set; }
 
     public TVShowInfo()
     {
@@ -55,7 +60,9 @@ namespace NMaier
   {
     public static readonly ConcurrentDictionary<int, TVShowInfo> cacheshow = new ConcurrentDictionary<int, TVShowInfo>(); // :(
     private static readonly ConcurrentDictionary<string, int> cache = new ConcurrentDictionary<string, int>();
-    private static readonly string tvdbkey = System.Configuration.ConfigurationSettings.AppSettings["TVShowDBKey"];  
+    private static readonly string tvdbkey = System.Configuration.ConfigurationSettings.AppSettings["TVShowDBKey"];
+    private readonly static ILog logger =
+          LogManager.GetLogger(typeof(TVStore));
 
     private static Regex seriesreg = new Regex(
              @"(.*?)(([0-9]{1,2})x([0-9]{1,2})|S([0-9]{1,2})(E[0-9]{1,2})?)",
@@ -64,17 +71,17 @@ namespace NMaier
 
     private static Regex regreplace = new Regex(
           @"([a-z])[\._-]",
-          RegexOptions.Compiled | RegexOptions.Multiline | RegexOptions.IgnoreCase
+          RegexOptions.Compiled
           );
 
     private static Regex regreplace1 = new Regex(
           @"\[.*?\]",
-          RegexOptions.Compiled | RegexOptions.Multiline | RegexOptions.IgnoreCase
+          RegexOptions.Compiled | RegexOptions.IgnoreCase
           );
 
     private static Regex regreplace2 = new Regex(
           @"\(.*?\)",
-          RegexOptions.Compiled | RegexOptions.Multiline | RegexOptions.IgnoreCase
+          RegexOptions.Compiled | RegexOptions.IgnoreCase
           );
 
 
@@ -111,6 +118,7 @@ namespace NMaier
             entry.ID = showid;
             entry.Name = xmlDoc.SelectSingleNode("//SeriesName").InnerText;
             entry.LastUpdated = System.Int64.Parse(xmlDoc.SelectSingleNode(".//lastupdated").InnerText);
+            entry.IMDBID = xmlDoc.SelectSingleNode("//IMDB_ID").InnerText;
             entry.TVEpisodes = new List<TVEpisode>();
 
             var episodes = xmlDoc.SelectNodes("//Episode");
@@ -118,10 +126,14 @@ namespace NMaier
             {
               var seasoninfo = new TVEpisode();
 
-              var epnum = ep.SelectSingleNode(".//Combined_episodenumber").InnerText;
-              var seasonnum = ep.SelectSingleNode(".//Combined_season").InnerText;
+              var epnum = ep.SelectSingleNode(".//EpisodeNumber").InnerText;
+              var seasonnum = ep.SelectSingleNode(".//SeasonNumber").InnerText;
               var title = ep.SelectSingleNode(".//EpisodeName").InnerText;
-
+              var firstaired = ep.SelectSingleNode(".//FirstAired");
+              if (firstaired.Value != null)
+              {
+                seasoninfo.FirstAired = DateTime.Parse(firstaired.Value);
+              }
 
               seasoninfo.Episode = (int)Math.Ceiling(System.Double.Parse(epnum, new System.Globalization.CultureInfo("en-US")));
               seasoninfo.Season = (int)Math.Ceiling(System.Double.Parse(seasonnum, new System.Globalization.CultureInfo("en-US")));
@@ -149,45 +161,45 @@ namespace NMaier
           sorozat = seriesreg.Match(System.IO.Path.GetFileNameWithoutExtension(path));
         }
 
-        if (sorozat.Success)
-        {
-          var hit = sorozat.Groups[1].Value;
-          hit = regreplace.Replace(hit, @"$1 ");
-          hit = regreplace1.Replace(hit, "");
-          hit = regreplace2.Replace(hit, "");
-
-          int entry;
-
-          if (!cache.TryGetValue(hit, out entry))
-          {
-            var url = String.Format("http://thetvdb.com/api/GetSeries.php?seriesname={0}", hit);
-            string xmlStr;
-            using (var wc = new System.Net.WebClient())
-            {
-              xmlStr = wc.DownloadString(url);
-            }
-            var xmlDoc = new System.Xml.XmlDocument();
-            xmlDoc.LoadXml(xmlStr);
-
-            try
-            {
-              entry = System.Int32.Parse(xmlDoc.SelectSingleNode("//seriesid").InnerText);
-              cache.TryAdd(hit, entry);
-            }
-            catch (Exception)
-            {
-              cache.TryAdd(hit, -1);
-              return -1;
-            }
-          }
-          return entry;
+        if (!sorozat.Success) {
+          return -1;
         }
-        return -1;
-      }
-      catch (Exception)
-      {
-        return -1;
 
+        var hit = sorozat.Groups[1].Value;
+        hit = regreplace.Replace(hit, @"$1 ");
+        hit = regreplace1.Replace(hit, "");
+        hit = regreplace2.Replace(hit, "");
+
+        int entry;
+
+        if (!cache.TryGetValue(hit, out entry))
+        {
+          var url = String.Format("http://thetvdb.com/api/GetSeries.php?seriesname={0}", hit);
+          string xmlStr;
+          using (var wc = new System.Net.WebClient())
+          {
+            xmlStr = wc.DownloadString(url);
+          }
+          var xmlDoc = new System.Xml.XmlDocument();
+          xmlDoc.LoadXml(xmlStr);
+
+          var seriesidText = xmlDoc.SelectSingleNode("//seriesid");
+          if (seriesidText != null)
+          {
+            entry = System.Int32.Parse(xmlDoc.SelectSingleNode("//seriesid").InnerText);
+            cache.TryAdd(hit, entry);
+          } else { 
+            cache.TryAdd(hit, -1);
+            return -1;
+          }
+        }
+        return entry;
+      }
+
+      catch (Exception e)
+      {
+        logger.Error(String.Format("TV: Failed to get TVShowID for {0}", path), e);
+        return null;
       }
     }
     public static int[] UpdatesSince(long time)
@@ -207,16 +219,8 @@ namespace NMaier
       return
         (from n in l
          select System.Int32.Parse(n.InnerText)).ToArray();
-
-
-
-
-
-
     }
   }
-
-
 }
 
 

@@ -14,7 +14,7 @@ using System.Threading;
 using NMaier.SimpleDlna.Server;
 using NMaier.SimpleDlna.Utilities;
 using NMaier;
-
+using log4net;
 
 namespace NMaier
 {
@@ -68,7 +68,9 @@ namespace NMaier
     private DateTime lastUpdated;
     private static TimeSpan maxDiff = new System.TimeSpan(10,0,0);
 
- 
+    private readonly static ILog logger =
+          LogManager.GetLogger(typeof(TVStore));
+
     private IDbConnection getConnection()
     {
       return Sqlite.GetDatabaseConnection(storeFile);
@@ -104,6 +106,7 @@ namespace NMaier
               tvshow.ID = rdr.GetInt32(0);
               tvshow.Name = rdr.GetString(1);
               tvshow.LastUpdated = rdr.GetInt64(2);
+              tvshow.IMDBID = rdr.GetString(3);
               tvshow.TVEpisodes = new List<TVEpisode>();
               col.TryAdd(tvshow.ID, tvshow);
             }
@@ -122,6 +125,7 @@ namespace NMaier
               tvshow.Season = rdr.GetInt32(1);
               tvshow.Episode = rdr.GetInt32(2);
               tvshow.Title = rdr.GetString(3);
+              tvshow.FirstAired = DateTime.Parse(rdr.GetString(4));
 
               var tv = col[id];
               tv.TVEpisodes.Add(tvshow);
@@ -140,8 +144,8 @@ namespace NMaier
         using (var cmd = sqlconn.CreateCommand())
         using (var cmd2 = sqlconn.CreateCommand())
         {
-          cmd.CommandText = "INSERT OR REPLACE INTO `TVSHow` (`id`, `name`, `lastupdated`) VALUES (@id, @name, @lastupdated);";
-          cmd2.CommandText = "INSERT OR REPLACE INTO TVSHowEntry (id, season, episode, title) VALUES (@id, @season, @episode, @title);";
+          cmd.CommandText = "INSERT OR REPLACE INTO `TVSHow` (`id`, `name`, `imdb`, `lastupdated`) VALUES (@id, @name, @imdb, @lastupdated);";
+          cmd2.CommandText = "INSERT OR REPLACE INTO TVSHowEntry (id, season, episode, title, aired) VALUES (@id, @season, @episode, @title, @aired);";
 
           var tid = cmd.CreateParameter();
           tid.DbType = DbType.Int32;
@@ -160,6 +164,11 @@ namespace NMaier
           tlastupdated.ParameterName = "@lastupdated";
           cmd.Parameters.Add(tlastupdated);
 
+          var timdbid = cmd.CreateParameter();
+          timdbid.DbType = DbType.String;
+          timdbid.ParameterName = "@imdb";
+          timdbid.Size = 128;
+          cmd.Parameters.Add(timdbid);
 
 
           var eid = cmd2.CreateParameter();
@@ -182,11 +191,18 @@ namespace NMaier
           etitle.DbType = DbType.String;
           cmd2.Parameters.Add(etitle);
 
+
+          var eaired = cmd2.CreateParameter();
+          eaired.ParameterName = "@aired";
+          eaired.DbType = DbType.DateTime;
+          cmd2.Parameters.Add(eaired);
+
           foreach (var tventry in data)
           {
             tid.Value = tventry.ID;
             tname.Value = tventry.Name;
             tlastupdated.Value = tventry.LastUpdated;
+            timdbid.Value = tventry.IMDBID;
             cmd.ExecuteNonQuery();
 
             foreach (var ep in tventry.TVEpisodes)
@@ -195,6 +211,7 @@ namespace NMaier
               eepisode.Value = ep.Episode;
               eseason.Value = ep.Season;
               etitle.Value = ep.Title;
+              eaired.Value = ep.FirstAired;
               cmd2.ExecuteNonQuery();
             }
           }
@@ -229,23 +246,34 @@ namespace NMaier
     {
       if (!initialized)
       {
-        lastUpdated = GetLastUpdatedDate();
+        try {
+          lastUpdated = GetLastUpdatedDate();
+        } catch (Exception e)
+        {
+          logger.Error(String.Format("TV: Failed to get LastUpdated"), e);
+        }
+        
         using (var conn = Sqlite.GetDatabaseConnection(storeFile)) {
           using (var c = conn.CreateCommand())
           {
-            c.CommandText = "CREATE TABLE IF NOT EXISTS TVSHow (id int PRIMARY KEY ON CONFLICT REPLACE, name varchar(128), lastupdated UNSIGNED BIG INT);";
+            c.CommandText = "CREATE TABLE IF NOT EXISTS TVSHow (id int PRIMARY KEY ON CONFLICT REPLACE, name varchar(128), lastupdated UNSIGNED BIG INT, imdb varchar(32));";
             c.ExecuteNonQuery();
           }
           using (var c0 = conn.CreateCommand())
           {
-            c0.CommandText = "CREATE TABLE IF NOT EXISTS TVSHowEntry (id int, season int, episode int, title varchar(128), UNIQUE (id, season, episode) ON CONFLICT REPLACE);";
+            c0.CommandText = "CREATE TABLE IF NOT EXISTS TVSHowEntry (id int, season int, episode int, title varchar(128), aired DATETIME, UNIQUE (id, season, episode) ON CONFLICT REPLACE);";
             c0.ExecuteNonQuery();
           }
         }
         this.InitCache();
         if (System.DateTime.Now - lastUpdated > maxDiff)
         {
-          CheckUpdates(EpochTimeExtensions.ToEpochTime(lastUpdated));
+          try {
+            CheckUpdates(EpochTimeExtensions.ToEpochTime(lastUpdated));
+          } catch (Exception e)
+          {
+            logger.Error(String.Format("TV: Failed to check updates"), e);
+          }
         }
         initialized = true;
       }
