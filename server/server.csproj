@@ -67,6 +67,7 @@
     <Compile Include="Comparers\BaseComparer.cs" />
     <Compile Include="Comparers\ComparerRepository.cs" />
     <Compile Include="Comparers\DateComparer.cs" />
+    <Compile Include="Comparers\FileDateComparer.cs" />
     <Compile Include="Comparers\FileSizeComparer.cs" />
     <Compile Include="Comparers\IItemComparer.cs" />
     <Compile Include="Comparers\TitleComparer.cs" />
