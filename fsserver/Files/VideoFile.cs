@@ -39,6 +39,9 @@ namespace NMaier.SimpleDlna.FileMediaServer
 
     private string seriesname;
 
+    private int? season;
+    private int? episode;
+
     private bool isSeries = false;
 
     private readonly static Regex seriesreg = new Regex(
@@ -56,40 +59,10 @@ namespace NMaier.SimpleDlna.FileMediaServer
     {
     }
 
-
-    private VideoFile(SerializationInfo info, DeserializeInfo di)
-      : this(di.Server, di.Info, di.Type)
+    private void FetchTV()
     {
-      actors = info.GetValue("a", typeof(string[])) as string[];
-      description = info.GetString("de");
-      director = info.GetString("di");
-      genre = info.GetString("g");
-      //title = info.GetString("t");
-      try {
-        width = info.GetInt32("w");
-        height = info.GetInt32("h");
-      }
-      catch (Exception) {
-      }
-      var ts = info.GetInt64("du");
-      if (ts > 0) {
-        duration = new TimeSpan(ts);
-      }
-      try {
-        bookmark = info.GetInt64("b");
-      }
-      catch (Exception) {
-        bookmark = 0;
-      }
-      try {
-        //subTitle = info.GetValue("st", typeof(Subtitle)) as Subtitle;
-        subTitle = new Subtitle(new System.IO.FileInfo(this.Path));
-      }
-      catch (Exception) {
-        subTitle = null;
-      }
-      try {
-        this.tvshowid = info.GetInt32("tvid");
+      try
+      {
 
         if (tvshowid == null)
         {
@@ -102,7 +75,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
           Server.UpdateTVCache(tvinfo);
           this.seriesname = tvinfo.Name;
 
-          var seriesreg0 = seriesreg.Match(base.Title);               
+          var seriesreg0 = seriesreg.Match(base.Title);
           if (seriesreg0.Success)
           {
             isSeries = true;
@@ -127,15 +100,19 @@ namespace NMaier.SimpleDlna.FileMediaServer
             if (season > 0 && episode > 0)
             {
               var t = tvinfo.Find(season, episode);
-              this.title = t;
+              //this.title = (this.Subtitle.HasSubtitle ? "*" : "") + t;
+              this.season = season;
+              this.episode = episode;
             }
-          } else
+          }
+          else
           {
             this.title = tvinfo.Name;
           }
         }
 
-      } catch (Exception exn)
+      }
+      catch (Exception exn)
       {
         if (exn is System.ArgumentNullException)
         {
@@ -189,7 +166,9 @@ namespace NMaier.SimpleDlna.FileMediaServer
           }
           this.title = xx;
           this.seriesname = System.IO.Directory.GetParent(this.Path).Name;
-        } else {
+        }
+        else
+        {
           var t = movieclear.Match(System.IO.Directory.GetParent(this.Path).Name);
           if (t.Success)
           {
@@ -200,10 +179,48 @@ namespace NMaier.SimpleDlna.FileMediaServer
             this.seriesname = System.IO.Directory.GetParent(this.Path).Name;
           }
           this.seriesname = this.seriesname.Replace(".", " ").Replace("_", " ");
-
-
         }
       }
+    }
+
+    private VideoFile(SerializationInfo info, DeserializeInfo di)
+      : this(di.Server, di.Info, di.Type)
+    {
+      actors = info.GetValue("a", typeof(string[])) as string[];
+      description = info.GetString("de");
+      director = info.GetString("di");
+      genre = info.GetString("g");
+      //title = info.GetString("t");
+      try {
+        width = info.GetInt32("w");
+        height = info.GetInt32("h");
+      }
+      catch (Exception) {
+      }
+      var ts = info.GetInt64("du");
+      if (ts > 0) {
+        duration = new TimeSpan(ts);
+      }
+      try {
+        bookmark = info.GetInt64("b");
+      }
+      catch (Exception) {
+        bookmark = 0;
+      }
+      try {
+        //subTitle = info.GetValue("st", typeof(Subtitle)) as Subtitle;
+        subTitle = new Subtitle(new System.IO.FileInfo(this.Path));
+      }
+      catch (Exception) {
+        subTitle = null;
+      }
+      try
+      {
+        this.tvshowid = info.GetInt32("tvid");
+        FetchTV();
+      }
+      catch (Exception) { }
+
 
       Server.UpdateFileCache(this);
       initialized = true;
@@ -239,6 +256,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
     {
       get
       {
+        MaybeInit();
         if (this.seriesname != null)
         {
           return this.seriesname;
@@ -250,7 +268,24 @@ namespace NMaier.SimpleDlna.FileMediaServer
     {
       get
       {
+        MaybeInit();
         return this.isSeries;
+      }
+    }
+    public int? Season
+    {
+      get
+      {
+        MaybeInit();
+        return this.season;
+      }
+    }
+    public int? Episode
+    {
+      get
+      {
+        MaybeInit();
+        return this.episode;
       }
     }
     public string MetaDescription
@@ -268,15 +303,6 @@ namespace NMaier.SimpleDlna.FileMediaServer
       {
         MaybeInit();
         return director;
-      }
-    }
-
-    public int? TVShowDBId
-    {
-      get
-      {
-        //MaybeInit();
-        return tvshowid;
       }
     }
 
@@ -372,6 +398,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
     {
       get
       {
+        MaybeInit();
         if (!string.IsNullOrWhiteSpace(this.title)) {
           //return string.Format("{0} — {1}", base.Title, title);
           return this.title;
@@ -385,12 +412,8 @@ namespace NMaier.SimpleDlna.FileMediaServer
       if (initialized) {
         return;
       }
-      
-      if (tvshowid == null)
-      {
-        tvshowid = TheTVDB.GetTVShowID(this.Path);
-      }
-      
+
+      FetchTV();
 
       try {
         using (var tl = TagLib.File.Create(new TagLibFileAbstraction(Item))) {

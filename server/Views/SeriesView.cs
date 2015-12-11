@@ -84,12 +84,13 @@ namespace NMaier.SimpleDlna.Server.Views
         }
       }
     }
-
     public override IMediaFolder Transform(IMediaFolder Root)
     {
       var root = new VirtualClonedFolder(Root);
       var series = new SimpleKeyedVirtualFolder(root, "Series");
-      SortFolder(root, series);
+      var movies = new SimpleKeyedVirtualFolder(root, "Movies");
+      //SortFolder(root, series);
+      /*
       foreach (var f in series.ChildFolders.ToList()) {
         var fsmi = f as VirtualFolder;
         root.AdoptFolder(fsmi);
@@ -98,8 +99,8 @@ namespace NMaier.SimpleDlna.Server.Views
         return root;
       }
 
-      var cascaded = new DoubleKeyedVirtualFolder(root, "Series");
-
+      var cascaded = new DoubleKeyedVirtualFolder(root, "Series"); */
+      /*
       foreach (var i in root.ChildFolders.ToList()) {
         
 //        var folder = cascaded.GetFolder(i.Title.StemCompareBase().Substring(0, 1).ToUpper());
@@ -120,7 +121,28 @@ namespace NMaier.SimpleDlna.Server.Views
         var folder = cascaded.GetFolder(c0 != null ? c0.MovieTitle : i.Title);
         folder.AddResource(i);
       }
-      return cascaded;
+      */
+      /*
+      var items = (from i in root.AllItems.ToList()
+                    let d = (i as IMediaVideoResource).InfoDate
+                    orderby d
+                    select i).ToList();
+      */
+      foreach (var c in root.AllItems.ToList())
+      {
+        var c0 = c as IMediaVideoResource;
+        var folder = (c0 != null && c0.IsSeries ? series : movies).GetFolder(c0 != null ? c0.MovieTitle : c.Title);
+        folder.AddResource(c);
+        root.RemoveResource(c);
+      }
+      foreach (var f in root.ChildFolders.ToList())
+      {
+        root.ReleaseFolder(f);
+      }
+      
+      root.AdoptFolder(series);
+      root.AdoptFolder(movies);
+      return root;
     }
   }
 }

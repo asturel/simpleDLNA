@@ -13,5 +13,10 @@ namespace NMaier.SimpleDlna.Server.Metadata
 
     string MovieTitle { get;  }
 
+    bool IsSeries { get; }
+
+    int? Season { get; }
+    int? Episode { get; }
+
   }
 }
