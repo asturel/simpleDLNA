@@ -94,11 +94,11 @@ namespace NMaier.SimpleDlna
     public bool Rescanning = true;
 
     [Argument("showhidden", HelpText = "Show hidden files/directories")]
-    [FlagArgument(false)]
+    [FlagArgument(true)]
     public bool ShowHidden = false;
 
     [Argument("showsample", HelpText = "Show sample files/directories")]
-    [FlagArgument(false)]
+    [FlagArgument(true)]
     public bool ShowSample = false;
 
     [Argument("ip", HelpText = "Allow only specified IPs", HelpVar = "IP")]
