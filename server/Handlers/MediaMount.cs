@@ -15,7 +15,7 @@ namespace NMaier.SimpleDlna.Server
       new Dictionary<IPAddress, Guid>();
 
     
-    public readonly Dictionary<string, string> Subscribers =
+    private readonly Dictionary<string, string> subscribers =
       new Dictionary<string, string>();
       
     private int subseq = -1;
@@ -112,7 +112,7 @@ namespace NMaier.SimpleDlna.Server
         }
       } catch (System.Net.WebException e)
       {
-        Subscribers.Remove(sid);
+        subscribers.Remove(sid);
       } catch (Exception exn)
       {
         Error("SendNotify failed" + exn.Message, exn);
@@ -121,7 +121,7 @@ namespace NMaier.SimpleDlna.Server
     }
     private void SendNotifyForAll()
     {
-      foreach (var notify in Subscribers)
+      foreach (var notify in subscribers)
       {
         if (notify.Value.Contains("ContentDirectory"))
         {
@@ -274,11 +274,11 @@ namespace NMaier.SimpleDlna.Server
           notifySid = Guid.NewGuid().ToString();
         }
         string callback;
-        if (!Subscribers.TryGetValue(notifySid, out callback)) {
+        if (!subscribers.TryGetValue(notifySid, out callback)) {
           if (request.Headers.ContainsKey("CALLBACK"))
           {
             callback = request.Headers["CALLBACK"].Replace("<", "").Replace(">", "");
-            Subscribers.Add(notifySid, callback);
+            subscribers.Add(notifySid, callback);
             Debug("Subscribe: " + notifySid + ": " + callback);
           } else
           {
