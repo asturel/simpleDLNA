@@ -183,6 +183,7 @@
     <None Include="Resources\MSMediaReceiverRegistrar.xml" />
     <Content Include="Resources\large.jpg" />
     <Content Include="Resources\large.png" />
+    <None Include="Resources\notify.xml" />
     <Content Include="Resources\small.jpg" />
     <Content Include="Resources\small.png" />
     <Content Include="Resources\x_featurelist.xml" />

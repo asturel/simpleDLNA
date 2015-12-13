@@ -14,6 +14,12 @@ namespace NMaier.SimpleDlna.Server
     private readonly Dictionary<IPAddress, Guid> guidsForAddresses =
       new Dictionary<IPAddress, Guid>();
 
+    
+    public readonly Dictionary<string, string> Subscribers =
+      new Dictionary<string, string>();
+      
+    private int subseq = -1;
+
     private static uint mount = 0;
 
     private readonly string prefix;
@@ -72,13 +78,68 @@ namespace NMaier.SimpleDlna.Server
       }
     }
 
+    public void SendNotify(string sid, string url)
+    {
+      try {
+        HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(url);
+        webRequest.Method = "NOTIFY";
+        webRequest.ContentType = "text/xml; charset=\"utf-8\"";
+        webRequest.Headers.Add("NT", "upnp:event");
+        webRequest.Headers.Add("NTS", "upnp:propchange");
+        webRequest.Headers.Add("SID", "uuid:" + sid);
+        webRequest.Headers.Add("SEQ", String.Format("{0}", ++subseq));
+
+        var doc = new XmlDocument();
+        doc.LoadXml(Properties.Resources.notify);
+        System.Xml.XmlNamespaceManager nsmgr = new System.Xml.XmlNamespaceManager(doc.NameTable);
+        nsmgr.AddNamespace("e", "urn:schemas-upnp-org:event-1-0");
+        var xProperty = doc.SelectSingleNode("//e:property", nsmgr);
+
+        var xElement = doc.CreateElement("SystemUpdateID");
+        xElement.InnerText = systemID.ToString();
+        xProperty.AppendChild(xElement);
+
+        byte[] requestBytes = new System.Text.UTF8Encoding().GetBytes(doc.OuterXml);
+
+        using (var reqstream = webRequest.GetRequestStream())
+        {
+          reqstream.Write(requestBytes, 0, requestBytes.Length);
+        }
+
+        using (var res = webRequest.GetResponse())
+        {
+
+        }
+      } catch (System.Net.WebException e)
+      {
+        Subscribers.Remove(sid);
+      } catch (Exception exn)
+      {
+        Error("SendNotify failed" + exn.Message, exn);
+      }
+
+    }
+    private void SendNotifyForAll()
+    {
+      foreach (var notify in Subscribers)
+      {
+        if (notify.Value.Contains("ContentDirectory"))
+        {
+          Debug("SENDING NOTIFY TO: " + notify.Value);
+          SendNotify(notify.Key, notify.Value);
+        }
+      }
+    }
+
     private void ChangedServer(object sender, EventArgs e)
     {
       soapCache.Clear();
       InfoFormat("Rescanned mount {0}", Uuid);
       systemID++;
-    }
+      SendNotifyForAll();
 
+    }
+ 
     private string GenerateDescriptor(IPAddress source)
     {
       var doc = new XmlDocument();
@@ -133,7 +194,6 @@ namespace NMaier.SimpleDlna.Server
     {
       return server.GetItem(id);
     }
-
     public IResponse HandleRequest(IRequest request)
     {
       if (Authorizer != null &&
@@ -208,11 +268,30 @@ namespace NMaier.SimpleDlna.Server
       }
       if (request.Method == "SUBSCRIBE") {
         var res = new StringResponse(HttpCode.Ok, string.Empty);
-        res.Headers.Add("SID", string.Format("uuid:{0}", Guid.NewGuid()));
+        string notifySid;
+        if (!request.Headers.TryGetValue("SID",out notifySid))
+        {
+          notifySid = Guid.NewGuid().ToString();
+        }
+        string callback;
+        if (!Subscribers.TryGetValue(notifySid, out callback)) {
+          if (request.Headers.ContainsKey("CALLBACK"))
+          {
+            callback = request.Headers["CALLBACK"].Replace("<", "").Replace(">", "");
+            Subscribers.Add(notifySid, callback);
+            Debug("Subscribe: " + notifySid + ": " + callback);
+          } else
+          {
+            //RENEW
+            
+          }
+        }
+        res.Headers.Add("SID", string.Format("uuid:{0}", notifySid));
         res.Headers.Add("TIMEOUT", request.Headers["timeout"]);
         return res;
       }
       if (request.Method == "UNSUBSCRIBE") {
+        //TODO: remove from subscribers
         return new StringResponse(HttpCode.Ok, string.Empty);
       }
       WarnFormat("Did not understand {0} {1}", request.Method, path);
