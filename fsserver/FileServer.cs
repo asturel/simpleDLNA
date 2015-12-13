@@ -54,14 +54,20 @@ namespace NMaier.SimpleDlna.FileMediaServer
 
     private readonly FileSystemWatcher[] watchers;
 
-    public FileServer(DlnaMediaTypes types, Identifiers ids,
+    private string[] recognizedExt = (
+      (from x in NMaier.SimpleDlna.Server.DlnaMaps.Ext2Media
+       select x.Key.ToUpperInvariant()).Union(new string[]{"SRT"}).ToArray());
+  
+
+
+  public FileServer(DlnaMediaTypes types, Identifiers ids,
                       params DirectoryInfo[] directories)
     {
       this.types = types;
       this.ids = ids;
       this.directories =
         (from d in directories.Distinct()
-         where 
+         where
              (ShowHidden || (!d.Attributes.HasFlag(FileAttributes.Hidden) && !d.Name.StartsWith("."))) &&
              (ShowSample || !d.FullName.ToLower().Contains("sample"))
          select d).ToArray();
@@ -210,6 +216,17 @@ namespace NMaier.SimpleDlna.FileMediaServer
             string.Join(", ", types.GetExtensions()));
           return;
         }
+        var recognizedExt =
+          (from x in this.recognizedExt
+           where e.FullPath.ToUpperInvariant().EndsWith(x)
+           select x).ToArray();
+
+        if (recognizedExt.Length == 0)
+        {
+          DebugFormat("Skipping change ({1}): {0}", e.FullPath, e.ChangeType);
+          return;
+        }
+
         DebugFormat(
           "File System changed ({1}): {0}", e.FullPath, e.ChangeType);
         DelayedRescan(e.ChangeType);
@@ -218,7 +235,6 @@ namespace NMaier.SimpleDlna.FileMediaServer
         Error("OnChanged failed", ex);
       }
     }
-
     private void OnRenamed(Object source, RenamedEventArgs e)
     {
       try {
@@ -233,6 +249,17 @@ namespace NMaier.SimpleDlna.FileMediaServer
           DebugFormat(
             "Skipping name {0} {1} {2}",
             e.Name, Path.GetExtension(e.FullPath), string.Join(", ", exts));
+          return;
+        }
+
+        var recognizedExt =
+          (from x in this.recognizedExt
+           where e.FullPath.ToUpperInvariant().EndsWith(x)
+           select x).ToArray();
+        
+        if (recognizedExt.Length == 0)
+        {
+          DebugFormat("Skipping change ({1}): {0}", e.FullPath, e.ChangeType);
           return;
         }
         DebugFormat(
