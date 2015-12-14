@@ -78,7 +78,7 @@ namespace NMaier.SimpleDlna.Server
       }
     }
 
-    public void SendNotify(string sid, string url)
+    private void SendNotify(string sid, string url)
     {
       try {
         HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(url);
@@ -121,7 +121,8 @@ namespace NMaier.SimpleDlna.Server
     }
     private void SendNotifyForAll()
     {
-      foreach (var notify in subscribers)
+      var list = new List<KeyValuePair<string, string>>(subscribers);
+      foreach (var notify in list)
       {
         if (notify.Value.Contains("ContentDirectory"))
         {
