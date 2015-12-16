@@ -85,10 +85,10 @@ namespace NMaier
           );
 
 
-    public static TVShowInfo GetTVShowDetails(int showid)
+    public static TVShowInfo GetTVShowDetails(int showid, bool noncache=false)
     {
       TVShowInfo entry;
-      if (!cacheshow.TryGetValue(showid, out entry))
+      if (!cacheshow.TryGetValue(showid, out entry) || noncache)
       {
         var url = String.Format("http://thetvdb.com/api/{1}/series/{0}/all/en.zip", showid, tvdbkey);
         byte[] xmlData;
@@ -121,6 +121,8 @@ namespace NMaier
             entry.IMDBID = xmlDoc.SelectSingleNode("//IMDB_ID").InnerText;
             entry.TVEpisodes = new List<TVEpisode>();
 
+            var airtime = xmlDoc.SelectSingleNode("//Airs_Time").InnerText;
+
             var episodes = xmlDoc.SelectNodes("//Episode");
             foreach (XmlNode ep in episodes)
             {
@@ -129,10 +131,13 @@ namespace NMaier
               var epnum = ep.SelectSingleNode(".//EpisodeNumber").InnerText;
               var seasonnum = ep.SelectSingleNode(".//SeasonNumber").InnerText;
               var title = ep.SelectSingleNode(".//EpisodeName").InnerText;
-              var firstaired = ep.SelectSingleNode(".//FirstAired");
-              if (firstaired.Value != null)
+              var firstaired = ep.SelectSingleNode(".//FirstAired").InnerText;
+              if (!String.IsNullOrEmpty(firstaired))
               {
-                seasoninfo.FirstAired = DateTime.Parse(firstaired.Value);
+                seasoninfo.FirstAired = DateTime.Parse(firstaired + " " + airtime);
+              } else
+              {
+                seasoninfo.FirstAired = new System.DateTime();
               }
 
               seasoninfo.Episode = (int)Math.Ceiling(System.Double.Parse(epnum, new System.Globalization.CultureInfo("en-US")));

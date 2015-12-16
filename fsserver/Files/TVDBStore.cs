@@ -225,13 +225,20 @@ namespace NMaier
       this.InsertMany(datax);
     }
 
-    private void CheckUpdates(long since)
+    private void CheckUpdates(long since, bool forced=false)
     {
 
-      var shouldUpdate = TheTVDB.UpdatesSince(since).Where(id => TheTVDB.cacheshow.ContainsKey(id)).ToArray();
+      int[] shouldUpdate;
+      if (!forced)
+      {
+        shouldUpdate = TheTVDB.UpdatesSince(since).Where(id => TheTVDB.cacheshow.ContainsKey(id)).ToArray();
+      } else
+      {
+        shouldUpdate = TheTVDB.cacheshow.Keys.ToArray();
+      }
       var updatedData =
         (from id in shouldUpdate
-        let tvinfo = TheTVDB.GetTVShowDetails(id)
+        let tvinfo = TheTVDB.GetTVShowDetails(id, true)
         select tvinfo).ToArray();
 
       foreach (var tv in updatedData)
@@ -269,7 +276,7 @@ namespace NMaier
         if (System.DateTime.Now - lastUpdated > maxDiff)
         {
           try {
-            CheckUpdates(EpochTimeExtensions.ToEpochTime(lastUpdated));
+            CheckUpdates(EpochTimeExtensions.ToEpochTime(lastUpdated), false);
           } catch (Exception e)
           {
             logger.Error(String.Format("TV: Failed to check updates"), e);
