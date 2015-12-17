@@ -3,7 +3,7 @@
 namespace NMaier.SimpleDlna.Server.Metadata
 {
   public interface IMetaVideoItem
-    : IMetaInfo, IMetaDescription, IMetaGenre, IMetaDuration, IMetaResolution
+    : IMetaInfo, IMetaDescription, IMetaGenre, IMetaDuration, IMetaResolution, IMetaSeries
   {
     IEnumerable<string> MetaActors { get; }
 
@@ -12,11 +12,6 @@ namespace NMaier.SimpleDlna.Server.Metadata
     Subtitle Subtitle { get; }
 
     string MovieTitle { get;  }
-
-    bool IsSeries { get; }
-
-    int? Season { get; }
-    int? Episode { get; }
 
   }
 }

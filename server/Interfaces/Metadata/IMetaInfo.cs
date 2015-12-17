@@ -7,5 +7,6 @@ namespace NMaier.SimpleDlna.Server.Metadata
     DateTime InfoDate { get; }
 
     long? InfoSize { get; }
+
   }
 }
