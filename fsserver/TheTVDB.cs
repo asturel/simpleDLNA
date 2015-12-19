@@ -127,18 +127,25 @@ namespace NMaier
             foreach (XmlNode ep in episodes)
             {
               var seasoninfo = new TVEpisode();
+              seasoninfo.FirstAired = new System.DateTime();
 
               var epnum = ep.SelectSingleNode(".//EpisodeNumber").InnerText;
               var seasonnum = ep.SelectSingleNode(".//SeasonNumber").InnerText;
               var title = ep.SelectSingleNode(".//EpisodeName").InnerText;
               var firstaired = ep.SelectSingleNode(".//FirstAired").InnerText;
+              
+
+              DateTime faired;
               if (!String.IsNullOrEmpty(firstaired))
               {
-                seasoninfo.FirstAired = DateTime.Parse(firstaired + " " + airtime);
-              } else
-              {
-                seasoninfo.FirstAired = new System.DateTime();
+                if (DateTime.TryParse(firstaired + " " + airtime, out faired))
+                {
+                  seasoninfo.FirstAired = faired;
+                }
               }
+
+              
+              
 
               seasoninfo.Episode = (int)Math.Ceiling(System.Double.Parse(epnum, new System.Globalization.CultureInfo("en-US")));
               seasoninfo.Season = (int)Math.Ceiling(System.Double.Parse(seasonnum, new System.Globalization.CultureInfo("en-US")));
@@ -195,7 +202,7 @@ namespace NMaier
             cache.TryAdd(hit, entry);
           } else { 
             cache.TryAdd(hit, -1);
-            return -1;
+            return null;
           }
         }
         return entry;
