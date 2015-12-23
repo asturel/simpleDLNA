@@ -54,7 +54,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
       }
     }
 
-    internal static FileReadStream Get(FileInfo info)
+    internal static FileReadStream Get(FileInfo info, BaseFile baseFile)
     {
       CacheItem rv;
       var key = info.FullName;
@@ -66,7 +66,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
         }
       }
       logger.DebugFormat("Constructing file stream {0}", key);
-      return new FileReadStream(info);
+      return new FileReadStream(info, baseFile);
     }
 
     internal static void Recycle(FileReadStream stream)
@@ -105,13 +105,16 @@ namespace NMaier.SimpleDlna.FileMediaServer
 
     private bool killed = false;
 
-    public FileReadStream(FileInfo info)
+    private BaseFile baseFile;
+
+    public FileReadStream(FileInfo info, BaseFile baseFile)
       : base(info.FullName, FileMode.Open,
              FileAccess.Read, FileShare.ReadWrite | FileShare.Delete,
              1,
              FileOptions.Asynchronous | FileOptions.SequentialScan)
     {
       this.info = info;
+      this.baseFile = baseFile;
       logger.DebugFormat("Opened file {0}", this.info.FullName);
     }
 
@@ -125,6 +128,16 @@ namespace NMaier.SimpleDlna.FileMediaServer
 
     public override void Close()
     {
+      if (this.CanRead || this.CanSeek)
+      {
+        //baseFile.lastpos = System.Math.Max(this.Position, baseFile.lastpos);
+        if (this.Position > 0 && baseFile.lastpos != this.Position && (this.Position*100/this.Length >= 8 || baseFile.lastpos == 0))
+        {
+          baseFile.lastpos = this.Position;
+          baseFile.UpdateCache();
+        }
+        
+      }
       if (!killed) {
         FileStreamCache.Recycle(this);
         return;

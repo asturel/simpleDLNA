@@ -132,7 +132,19 @@ namespace NMaier.SimpleDlna.Server.Views
       {
         var c0 = c as IMediaVideoResource;
         var folder = (c0 != null && c0.IsSeries ? series : movies).GetFolder(c0 != null ? c0.MovieTitle : c.Title);
-        folder.AddResource(c);
+        //var folder = new DoubleKeyedVirtualFolder((c0 != null && c0.IsSeries ? series : movies),(c0 != null ? c0.MovieTitle : c.Title) );
+        if (c0.Progress <= 85)
+        {
+          folder.AddResource(c);
+        } else
+        {
+          var folder1 = folder.ChildFolders.ToList().Find(f => f.Title == "WATCHED");
+          if (folder1 == null) folder1 = new VirtualFolder(folder, "WATCHED");
+
+          folder1.AddResource(c);
+          folder.AdoptFolder(folder1);
+        }
+        
         root.RemoveResource(c);
       }
       foreach (var f in root.ChildFolders.ToList())

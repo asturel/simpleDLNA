@@ -199,6 +199,18 @@ namespace NMaier.SimpleDlna.FileMediaServer
       description = info.GetString("de");
       director = info.GetString("di");
       genre = info.GetString("g");
+      try {
+        lastpos = info.GetInt64("lp");
+        /*
+        if (lastpos > 0)
+        {
+          Error("LASTPOS FOR " + this.Path + " : " + (float)lastpos/(float)base.InfoSize*100.0);
+        }
+        */
+      } catch (Exception)
+      {
+        lastpos = 0;
+      }
       //title = info.GetString("t");
       try {
         width = info.GetInt32("w");
@@ -259,6 +271,17 @@ namespace NMaier.SimpleDlna.FileMediaServer
       {
         MaybeInit();
         return actors;
+      }
+    }
+    public long Progress
+    {
+      get
+      {
+        if (this.InfoSize.HasValue)
+        {
+          return this.lastpos * 100L / this.InfoSize.Value;
+        }
+        return 0;
       }
     }
     public string MovieTitle
@@ -501,6 +524,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
       info.AddValue("du", duration.GetValueOrDefault(EmptyDuration).Ticks);
       //info.AddValue("st", subTitle);
       info.AddValue("tvid", (tvshowid.HasValue ? tvshowid.Value : -1));
+      info.AddValue("lp", base.lastpos);
       //info.AddValue("tvname", tvshow.Name);
     }
   }

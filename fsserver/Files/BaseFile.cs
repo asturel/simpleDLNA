@@ -16,6 +16,8 @@ namespace NMaier.SimpleDlna.FileMediaServer
 
     private long? length = null;
 
+    public long lastpos = 0;
+
     private readonly FileServer server;
 
     private readonly string title;
@@ -225,7 +227,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
     public Stream CreateContentStream()
     {
       try {
-        return FileStreamCache.Get(Item);
+        return FileStreamCache.Get(Item, this);
       }
       catch (FileNotFoundException ex) {
         Error("Failed to access: " + Item.FullName, ex);
@@ -255,6 +257,19 @@ namespace NMaier.SimpleDlna.FileMediaServer
     public void LazyLoadedCover(object sender, EventArgs e)
     {
       Server.UpdateFileCache(this);
+    }
+
+    public void UpdateCache()
+    {
+      if (this is VideoFile /*|| this is AudioFile*/)
+      {
+        Server.UpdateFileCache(this);
+        if (this.InfoSize.HasValue && this.lastpos * 100 / this.InfoSize > 60)
+        {
+          Debug("UpdateCache " + this);
+          server.DelayedRescan(WatcherChangeTypes.Changed);
+        }
+      }
     }
 
     public virtual void LoadCover()
