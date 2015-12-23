@@ -15,8 +15,8 @@ namespace NMaier.SimpleDlna.Server
       new Dictionary<IPAddress, Guid>();
 
     
-    private readonly Dictionary<string, string> subscribers =
-      new Dictionary<string, string>();
+    private readonly Dictionary<string, Tuple<string, DateTime>> subscribers =
+      new Dictionary<string, Tuple<string, DateTime>>(StringComparer.InvariantCultureIgnoreCase);
       
     private int subseq = -1;
 
@@ -112,7 +112,8 @@ namespace NMaier.SimpleDlna.Server
         }
       } catch (System.Net.WebException e)
       {
-        subscribers.Remove(sid);
+        //subscribers.Remove(sid);
+        Error(string.Format("SendNotify failed {0} {1}", sid, url), e);
       } catch (Exception exn)
       {
         Error("SendNotify failed" + exn.Message, exn);
@@ -121,13 +122,20 @@ namespace NMaier.SimpleDlna.Server
     }
     private void SendNotifyForAll()
     {
-      var list = new List<KeyValuePair<string, string>>(subscribers);
+      var now = DateTime.Now;
+      var list = new List<KeyValuePair<string, Tuple<string,DateTime>>>(subscribers);
       foreach (var notify in list)
       {
-        if (notify.Value.Contains("ContentDirectory"))
+        if (notify.Value.Item2 > now)
         {
-          Debug("SENDING NOTIFY TO: " + notify.Value);
-          SendNotify(notify.Key, notify.Value);
+          if (notify.Value.Item1.Contains("ContentDirectory"))
+          {
+            Debug("SENDING NOTIFY TO: " + notify.Value);
+            SendNotify(notify.Key, notify.Value.Item1);
+          }
+        } else {
+          Debug(String.Format("Notify {0} expired, removing", notify.Key));
+          subscribers.Remove(notify.Key);
         }
       }
     }
@@ -273,19 +281,29 @@ namespace NMaier.SimpleDlna.Server
         if (!request.Headers.TryGetValue("SID",out notifySid))
         {
           notifySid = Guid.NewGuid().ToString();
+        } else
+        {
+          notifySid = notifySid.Remove(0, 5);
         }
-        string callback;
-        if (!subscribers.TryGetValue(notifySid, out callback)) {
+        //string callback;
+        Tuple<string, DateTime> subres;
+        int timeout = System.Int32.Parse(request.Headers["timeout"].Remove(0, 7));
+        DateTime dtimeout = System.DateTime.Now.AddSeconds(timeout);
+        if (!subscribers.TryGetValue(notifySid, out subres)) {
           if (request.Headers.ContainsKey("CALLBACK"))
           {
-            callback = request.Headers["CALLBACK"].Replace("<", "").Replace(">", "");
-            subscribers.Add(notifySid, callback);
+            string callback = request.Headers["CALLBACK"].Replace("<", "").Replace(">", "");
+            subscribers.Add(notifySid, new Tuple<string, DateTime>(callback, dtimeout));
             Debug("Subscribe: " + notifySid + ": " + callback);
           } else
           {
-            //RENEW
-            
+            Error("SUBSCRIBE WTF: " + request.Headers);
           }
+        }
+        else
+        {
+          //RENEW
+          subscribers[notifySid] = new Tuple<string, DateTime>(subres.Item1, dtimeout);
         }
         res.Headers.Add("SID", string.Format("uuid:{0}", notifySid));
         res.Headers.Add("TIMEOUT", request.Headers["timeout"]);
