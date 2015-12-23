@@ -65,7 +65,7 @@ namespace NMaier
           LogManager.GetLogger(typeof(TVStore));
 
     private static Regex seriesreg = new Regex(
-             @"(.*?)(([0-9]{1,2})x([0-9]{1,2})|S([0-9]{1,2})(E[0-9]{1,2})?)",
+             @"(.*?)(([^0-9][0-9]{1,2})x([0-9]{1,2}[^0-9])|S([0-9]{1,2})(E[0-9]{1,2})?|[\._ -]([0-9]{1,3})[\._ -][^\dsS])",
              RegexOptions.Compiled | RegexOptions.IgnoreCase
              );
 
@@ -165,22 +165,25 @@ namespace NMaier
     {
       try
       {
-
+        if (path.ToLower().Contains("movies"))
+        {
+          return null;
+        }
         var p = System.IO.Directory.GetParent(path);
+        string hit = p.Name;
         var sorozat = seriesreg.Match(p.Name);
         if (!sorozat.Success)
         {
           sorozat = seriesreg.Match(System.IO.Path.GetFileNameWithoutExtension(path));
         }
 
-        if (!sorozat.Success) {
-          return -1;
+        
+        if (sorozat.Success){
+          hit = sorozat.Groups[1].Value;
+          hit = regreplace.Replace(hit, @"$1 ");
+          hit = regreplace1.Replace(hit, "");
+          hit = regreplace2.Replace(hit, "");
         }
-
-        var hit = sorozat.Groups[1].Value;
-        hit = regreplace.Replace(hit, @"$1 ");
-        hit = regreplace1.Replace(hit, "");
-        hit = regreplace2.Replace(hit, "");
 
         int entry;
 
@@ -202,6 +205,7 @@ namespace NMaier
             cache.TryAdd(hit, entry);
           } else { 
             cache.TryAdd(hit, -1);
+            logger.InfoFormat("TVDB: Cant find in database {0}", path);
             return null;
           }
         }

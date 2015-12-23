@@ -46,7 +46,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
 
     private readonly static Regex seriesreg = new Regex(
             //@"(([0-9]{1,2})x([0-9]{1,2})|S([0-9]{1,2})+E([0-9]{1,2}))",
-            @"(([0-9]{1,2})x([0-9]{1,2})|[ \._\-]([0-9]{3})([ \._\-]|$)|(S([0-9]{1,2})+(E([0-9]{1,2})| )))",
+            @"(([^0-9][0-9]{1,2})x([0-9]{1,2}[^0-9])|[ \._\-]([0-9]{3})([ \._\-]|$)|(S([0-9]{1,2})+(E([0-9]{1,2})| ))|[\._ -]([0-9]{1,3})[\._ -][^\dsS])",
             RegexOptions.Compiled | RegexOptions.IgnoreCase
             );
     private readonly static Regex movieclear = new Regex(
@@ -64,7 +64,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
       try
       {
 
-        if (tvshowid == null)
+        if (tvshowid == null || tvshowid == -1)
         {
           this.tvshowid = TheTVDB.GetTVShowID(this.Path);
         }
@@ -74,11 +74,11 @@ namespace NMaier.SimpleDlna.FileMediaServer
           var tvinfo = TheTVDB.GetTVShowDetails(this.tvshowid.Value);
           Server.UpdateTVCache(tvinfo);
           this.seriesname = tvinfo.Name;
+          isSeries = true;
 
           var seriesreg0 = seriesreg.Match(base.Title);
           if (seriesreg0.Success)
           {
-            isSeries = true;
             var season = 0;
             var episode = 0;
             if (seriesreg0.Groups[2].Value != "")
@@ -95,12 +95,21 @@ namespace NMaier.SimpleDlna.FileMediaServer
             {
               var seasonandep = System.Int32.Parse(seriesreg0.Groups[4].Value);
               episode = seasonandep % 100;
-              season = (seasonandep - episode) / 100;
+              season = Math.Max((seasonandep - episode) / 100, 1);
+            }
+            else if (seriesreg0.Groups[10].Value != "")
+            {
+              var seasonandep = System.Int32.Parse(seriesreg0.Groups[10].Value);
+              episode = seasonandep % 100;
+              season = Math.Max((seasonandep - episode) / 100,1);
+            } else {
+              Console.WriteLine(seriesreg0);
             }
             if (season > 0 && episode > 0)
             {
               var t = tvinfo.Find(season, episode);
               //this.title = (this.Subtitle.HasSubtitle ? "*" : "") + t;
+              this.title = t;
               this.season = season;
               this.episode = episode;
             }
