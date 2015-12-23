@@ -108,7 +108,6 @@ namespace NMaier.SimpleDlna.FileMediaServer
             if (season > 0 && episode > 0)
             {
               var t = tvinfo.Find(season, episode);
-              //this.title = (this.Subtitle.HasSubtitle ? "*" : "") + t;
               this.title = t;
               this.season = season;
               this.episode = episode;
@@ -242,6 +241,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
       }
       catch (Exception) { }
 
+      this.title = (this.Subtitle.HasSubtitle ? "*" : "") + this.title;
 
       Server.UpdateFileCache(this);
       initialized = true;
@@ -446,6 +446,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
       }
 
       FetchTV();
+      this.title = (this.Subtitle.HasSubtitle ? "*" : "") + this.title;
 
       try {
         using (var tl = TagLib.File.Create(new TagLibFileAbstraction(Item))) {
