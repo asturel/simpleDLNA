@@ -251,16 +251,18 @@ namespace NMaier.SimpleDlna.FileMediaServer
             e.Name, Path.GetExtension(e.FullPath), string.Join(", ", exts));
           return;
         }
-
-        var recognizedExt =
-          (from x in this.recognizedExt
-           where e.FullPath.ToUpperInvariant().EndsWith(x)
-           select x).ToArray();
-        
-        if (recognizedExt.Length == 0)
+        if (!System.IO.File.GetAttributes(e.FullPath).HasFlag(FileAttributes.Directory))
         {
-          DebugFormat("Skipping change ({1}): {0}", e.FullPath, e.ChangeType);
-          return;
+          var recognizedExt =
+            (from x in this.recognizedExt
+             where e.FullPath.ToUpperInvariant().EndsWith(x)
+             select x).ToArray();
+
+          if (recognizedExt.Length == 0)
+          {
+            DebugFormat("Skipping change ({1}): {0}", e.FullPath, e.ChangeType);
+            return;
+          }
         }
         DebugFormat(
           "File System changed ({1}): {0}", e.FullPath, e.ChangeType);
