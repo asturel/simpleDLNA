@@ -46,7 +46,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
 
     private readonly static Regex seriesreg = new Regex(
             //@"(([0-9]{1,2})x([0-9]{1,2})|S([0-9]{1,2})+E([0-9]{1,2}))",
-            @"(([^0-9][0-9]{1,2})x([0-9]{1,2}[^0-9])|[ \._\-]([0-9]{3})([ \._\-]|$)|(S([0-9]{1,2})+(E([0-9]{1,2})| ))|[\._ -]([0-9]{1,3})[\._ -][^\dsS])",
+            @"(([^0-9][0-9]{1,2})x([0-9]{1,2}[^0-9])|[ \._\-]([0-9]{3})([ \._\-]|$)|(S([0-9]{1,2})+(E([0-9]{1,2})| ))|[_ -]([0-9]{1,3})[\._ -][^\dsS])",
             RegexOptions.Compiled | RegexOptions.IgnoreCase
             );
     private readonly static Regex movieclear = new Regex(
@@ -133,12 +133,13 @@ namespace NMaier.SimpleDlna.FileMediaServer
       }
       if (this.seriesname == null)
       {
-        var seriesreg0 = seriesreg.Match(base.Title);
+        var seriesreg0 = seriesreg.Match(base.Item.Name);
 
         if (seriesreg0.Success)
         {
           var season = 0;
           var episode = 0;
+          this.isSeries = true;
           if (seriesreg0.Groups[2].Value != "")
           {
             season = System.Int32.Parse(seriesreg0.Groups[2].Value);
@@ -153,7 +154,17 @@ namespace NMaier.SimpleDlna.FileMediaServer
           {
             var seasonandep = System.Int32.Parse(seriesreg0.Groups[4].Value);
             episode = seasonandep % 100;
-            season = (seasonandep - episode) / 100;
+            season = Math.Max((seasonandep - episode) / 100, 1);
+          }
+          else if (seriesreg0.Groups[10].Value != "")
+          {
+            var seasonandep = System.Int32.Parse(seriesreg0.Groups[10].Value);
+            episode = seasonandep % 100;
+            season = Math.Max((seasonandep - episode) / 100, 1);
+          }
+          else
+          {
+            Console.WriteLine(seriesreg0);
           }
 
           var xx = "-";
@@ -184,7 +195,15 @@ namespace NMaier.SimpleDlna.FileMediaServer
           }
           else
           {
-            this.seriesname = System.IO.Directory.GetParent(this.Path).Name;
+            var t2 = movieclear.Match(this.Item.Name);
+            if (t2.Success)
+            {
+              this.seriesname = String.Format("{0} ({1})", t2.Groups[1].Value, t2.Groups[3].Value);
+            }
+            else
+            {
+              this.seriesname = System.IO.Directory.GetParent(this.Path).Name;
+            }
           }
           this.seriesname = this.seriesname.Replace(".", " ").Replace("_", " ");
         }
@@ -240,8 +259,6 @@ namespace NMaier.SimpleDlna.FileMediaServer
         FetchTV();
       }
       catch (Exception) { }
-
-      this.title = (this.Subtitle.HasSubtitle ? "*" : "") + this.title;
 
       Server.UpdateFileCache(this);
       initialized = true;
@@ -431,11 +448,13 @@ namespace NMaier.SimpleDlna.FileMediaServer
       get
       {
         MaybeInit();
+        var t = base.Title;
         if (!string.IsNullOrWhiteSpace(this.title)) {
           //return string.Format("{0} — {1}", base.Title, title);
-          return this.title;
+          t = this.title;
         }
-        return base.Title;
+        t = (this.Subtitle.HasSubtitle ? "*" : "") + (t);
+        return t;
       }
     }
 
@@ -446,8 +465,6 @@ namespace NMaier.SimpleDlna.FileMediaServer
       }
 
       FetchTV();
-      this.title = (this.Subtitle.HasSubtitle ? "*" : "") + this.title;
-
       try {
         using (var tl = TagLib.File.Create(new TagLibFileAbstraction(Item))) {
           try {

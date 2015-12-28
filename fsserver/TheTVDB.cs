@@ -65,7 +65,7 @@ namespace NMaier
           LogManager.GetLogger(typeof(TVStore));
 
     private static Regex seriesreg = new Regex(
-             @"(.*?)(([^0-9][0-9]{1,2})x([0-9]{1,2}[^0-9])|S([0-9]{1,2})(E[0-9]{1,2})?|[\._ -]([0-9]{1,3})[\._ -][^\dsS])",
+             @"(.*?)(([^0-9][0-9]{1,2})x([0-9]{1,2}[^0-9])|S([0-9]{1,2})(E[0-9]{1,2})?|[_ -]([0-9]{1,3})[\._ -][^\dsS])",
              RegexOptions.Compiled | RegexOptions.IgnoreCase
              );
 
