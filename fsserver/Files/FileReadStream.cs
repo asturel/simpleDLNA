@@ -96,7 +96,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
 
   internal sealed class FileReadStream : FileStream
   {
-    private const int BUFFER_SIZE = 1 << 12;
+    private const int BUFFER_SIZE = 2 << 20;
 
     private readonly FileInfo info;
 
@@ -110,7 +110,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
     public FileReadStream(FileInfo info, BaseFile baseFile)
       : base(info.FullName, FileMode.Open,
              FileAccess.Read, FileShare.ReadWrite | FileShare.Delete,
-             1,
+             BUFFER_SIZE,
              FileOptions.Asynchronous | FileOptions.SequentialScan)
     {
       this.info = info;
