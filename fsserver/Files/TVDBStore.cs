@@ -124,8 +124,10 @@ namespace NMaier
               var id = rdr.GetInt32(0);
               tvshow.Season = rdr.GetInt32(1);
               tvshow.Episode = rdr.GetInt32(2);
-              tvshow.Title = rdr.GetString(3);
-              tvshow.FirstAired = DateTime.Parse(rdr.GetString(4));
+              tvshow.EpisodeId = rdr.GetInt32(3);
+              tvshow.AbsoluteNumber = rdr.GetInt32(4);
+              tvshow.Title = rdr.GetString(5);
+              tvshow.FirstAired = DateTime.Parse(rdr.GetString(6));
 
               var tv = col[id];
               tv.TVEpisodes.Add(tvshow);
@@ -145,7 +147,7 @@ namespace NMaier
         using (var cmd2 = sqlconn.CreateCommand())
         {
           cmd.CommandText = "INSERT OR REPLACE INTO `TVSHow` (`id`, `name`, `imdb`, `lastupdated`) VALUES (@id, @name, @imdb, @lastupdated);";
-          cmd2.CommandText = "INSERT OR REPLACE INTO TVSHowEntry (id, season, episode, title, aired) VALUES (@id, @season, @episode, @title, @aired);";
+          cmd2.CommandText = "INSERT OR REPLACE INTO TVSHowEntry (id, season, episode, episodeid, absolutenumber, title, aired) VALUES (@id, @season, @episode, @episodeid, @absolutenumber, @title, @aired);";
 
           var tid = cmd.CreateParameter();
           tid.DbType = DbType.Int32;
@@ -197,6 +199,16 @@ namespace NMaier
           eaired.DbType = DbType.DateTime;
           cmd2.Parameters.Add(eaired);
 
+          var eepisodeid = cmd2.CreateParameter();
+          eepisodeid.ParameterName = "@episodeid";
+          eepisodeid.DbType = DbType.Int32;
+          cmd2.Parameters.Add(eepisodeid);
+
+          var eabsolutenumber = cmd2.CreateParameter();
+          eabsolutenumber.ParameterName = "@absolutenumber";
+          eabsolutenumber.DbType = DbType.Int32;
+          cmd2.Parameters.Add(eabsolutenumber);
+
           foreach (var tventry in data)
           {
             tid.Value = tventry.ID;
@@ -212,6 +224,8 @@ namespace NMaier
               eseason.Value = ep.Season;
               etitle.Value = ep.Title;
               eaired.Value = ep.FirstAired;
+              eepisodeid.Value = ep.EpisodeId;
+              eabsolutenumber.Value = ep.AbsoluteNumber;
               cmd2.ExecuteNonQuery();
             }
           }
@@ -231,7 +245,16 @@ namespace NMaier
       int[] shouldUpdate;
       if (!forced)
       {
-        shouldUpdate = TheTVDB.UpdatesSince(since).Where(id => TheTVDB.cacheshow.ContainsKey(id)).ToArray();
+        var updatesince = TheTVDB.UpdatesSince(since);
+        shouldUpdate = updatesince.Series.Where(id => TheTVDB.cacheshow.ContainsKey(id)).ToArray();
+
+        var s2 = updatesince.Episodes.Select(epid => (TheTVDB.cacheshow.ToArray().Where(tv => tv.Value.TVEpisodes.Where(ep => ep.EpisodeId == 1).Count() > 0)).Select (x => x.Key).ToArray()).ToArray();
+        foreach (var s22 in s2)
+        {
+          shouldUpdate = shouldUpdate.Concat(s22).ToArray();
+        }
+        shouldUpdate = shouldUpdate.Distinct().ToArray();
+
       } else
       {
         shouldUpdate = TheTVDB.cacheshow.Keys.ToArray();
@@ -268,7 +291,7 @@ namespace NMaier
           }
           using (var c0 = conn.CreateCommand())
           {
-            c0.CommandText = "CREATE TABLE IF NOT EXISTS TVSHowEntry (id int, season int, episode int, title varchar(128), aired DATETIME, UNIQUE (id, season, episode) ON CONFLICT REPLACE);";
+            c0.CommandText = "CREATE TABLE IF NOT EXISTS TVSHowEntry (id int, season int, episode int, episodeid int, absolutenumber int, title varchar(128), aired DATETIME, UNIQUE (id, season, episode) ON CONFLICT REPLACE);";
             c0.ExecuteNonQuery();
           }
         }

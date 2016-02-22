@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
+using NMaier.SimpleDlna.Utilities;
 
 namespace NMaier.SimpleDlna.FileMediaServer
 {
@@ -43,7 +44,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
     private int? episode;
 
     private bool isSeries = false;
-
+/*
     private readonly static Regex seriesreg = new Regex(
             //@"(([0-9]{1,2})x([0-9]{1,2})|S([0-9]{1,2})+E([0-9]{1,2}))",
             @"(([^0-9][0-9]{1,2})x([0-9]{1,2}[^0-9])|[ \._\-]([0-9]{3})([ \._\-]|$)|(S([0-9]{1,2})+(E([0-9]{1,2})| ))|[_ -]([0-9]{1,3})[\._ -][^\dsS])",
@@ -53,7 +54,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
             @"(.*?)[._ ]?(([0-9]{4})|[0-9]{3,4}p)",
             RegexOptions.Compiled | RegexOptions.IgnoreCase
             );
-
+*/
     private VideoFile(SerializationInfo info, StreamingContext ctx)
       : this(info, ctx.Context as DeserializeInfo)
     {
@@ -68,57 +69,118 @@ namespace NMaier.SimpleDlna.FileMediaServer
         {
           this.tvshowid = TheTVDB.GetTVShowID(this.Path);
         }
+        var steszt = (System.IO.Directory.GetParent(base.Path).Name).TryGetName();
+        if (steszt == null || (steszt is Formatting.NiceSeriesName && (steszt as Formatting.NiceSeriesName).Episode == 0)) {
+          steszt = base.Title.TryGetName();
+        }
+        if (steszt == null)
+        {
+          steszt = base.Item.Name.TryGetName();
+        }
+        TVShowInfo tvinfo = null;
+
         if (tvshowid != null && tvshowid > 0)
         {
+          tvinfo = TheTVDB.GetTVShowDetails(this.tvshowid.Value);
+          Server.UpdateTVCache(tvinfo);
+          this.seriesname = tvinfo.Name;
+          isSeries = true;
+        }
 
+        if (steszt is Utilities.Formatting.NiceSeriesName)
+        {
+          isSeries = true;
+          var steszt2 = steszt as Utilities.Formatting.NiceSeriesName;
+          if (String.IsNullOrEmpty(this.seriesname))
+          {
+            this.seriesname = steszt2.Name;
+          }
+
+          if (/*steszt2.Season > 0 &&*/ steszt2.Episode > 0)
+          {
+            if (tvinfo != null)
+            {
+              this.title = tvinfo.Find(steszt2.Season, steszt2.Episode);
+            } else
+            {
+              this.title = String.Format("{0}x{1}", steszt2.Season, steszt2.Episode);
+            }
+            this.season = steszt2.Season;
+            this.episode = steszt2.Episode;
+          }
+          else
+          {
+            this.title = base.Title;
+          }
+          
+          if (!String.IsNullOrEmpty(steszt.Releaser))
+          {
+            this.title = String.Format("{0} ({1},{2})", this.title, steszt.Resolution, steszt.Releaser);
+          } 
+
+        }
+        else if (steszt is Formatting.MovieName)
+        {
+          var n = steszt as Formatting.MovieName;
+          this.seriesname = String.Format("{0} ({1})", n.Name, n.Year);
+        }
+        else
+        {
+          this.seriesname = System.IO.Directory.GetParent(this.Path).Name;
+        }
+      }
+      catch (Exception exn)
+      {
+        if (exn is System.ArgumentNullException)
+        {
+        }
+        else
+        {
+          this.tvshowid = TheTVDB.GetTVShowID(this.Path);
+        }
+
+      }
+    }
+
+
+
+    private void FetchTV2()
+    {
+      try
+      {
+
+        if (tvshowid == null || tvshowid == -1)
+        {
+          this.tvshowid = TheTVDB.GetTVShowID(this.Path);
+        }
+        if (tvshowid != null && tvshowid > 0)
+        {
           var tvinfo = TheTVDB.GetTVShowDetails(this.tvshowid.Value);
           Server.UpdateTVCache(tvinfo);
           this.seriesname = tvinfo.Name;
           isSeries = true;
 
-          var seriesreg0 = seriesreg.Match(base.Title);
-          if (seriesreg0.Success)
+          var steszt = base.Title.TryGetName();
+
+          if (steszt is Utilities.Formatting.NiceSeriesName)
           {
-            var season = 0;
-            var episode = 0;
-            if (seriesreg0.Groups[2].Value != "")
+            var steszt2 = steszt as Utilities.Formatting.NiceSeriesName;
+            if (steszt2.Season > 0 && steszt2.Episode > 0)
             {
-              season = System.Int32.Parse(seriesreg0.Groups[2].Value);
-              episode = System.Int32.Parse(seriesreg0.Groups[3].Value);
-            }
-            else if (seriesreg0.Groups[6].Value != "")
-            {
-              season = System.Int32.Parse(seriesreg0.Groups[7].Value);
-              System.Int32.TryParse(seriesreg0.Groups[9].Value, out episode);
-            }
-            else if (seriesreg0.Groups[4].Value != "")
-            {
-              var seasonandep = System.Int32.Parse(seriesreg0.Groups[4].Value);
-              episode = seasonandep % 100;
-              season = Math.Max((seasonandep - episode) / 100, 1);
-            }
-            else if (seriesreg0.Groups[10].Value != "")
-            {
-              var seasonandep = System.Int32.Parse(seriesreg0.Groups[10].Value);
-              episode = seasonandep % 100;
-              season = Math.Max((seasonandep - episode) / 100,1);
-            } else {
-              Console.WriteLine(seriesreg0);
-            }
-            if (season > 0 && episode > 0)
-            {
-              var t = tvinfo.Find(season, episode);
+              var t = tvinfo.Find(steszt2.Season, steszt2.Episode);
               this.title = t;
-              this.season = season;
-              this.episode = episode;
+              this.season = steszt2.Season;
+              this.episode = steszt2.Episode;
+            } else
+            {
+              this.title = base.Title;
             }
-          }
-          else
+
+          } else
           {
-            this.title = tvinfo.Name;
+            this.title = base.Title;
           }
         }
-
       }
       catch (Exception exn)
       {
@@ -133,80 +195,39 @@ namespace NMaier.SimpleDlna.FileMediaServer
       }
       if (this.seriesname == null)
       {
-        var seriesreg0 = seriesreg.Match(base.Item.Name);
+        var trynice = base.Item.Name.TryGetName();
 
-        if (seriesreg0.Success)
+        if (trynice is Formatting.NiceSeriesName)
         {
-          var season = 0;
-          var episode = 0;
-          this.isSeries = true;
-          if (seriesreg0.Groups[2].Value != "")
-          {
-            season = System.Int32.Parse(seriesreg0.Groups[2].Value);
-            episode = System.Int32.Parse(seriesreg0.Groups[3].Value);
-          }
-          else if (seriesreg0.Groups[6].Value != "")
-          {
-            season = System.Int32.Parse(seriesreg0.Groups[7].Value);
-            System.Int32.TryParse(seriesreg0.Groups[9].Value, out episode);
-          }
-          else if (seriesreg0.Groups[4].Value != "")
-          {
-            var seasonandep = System.Int32.Parse(seriesreg0.Groups[4].Value);
-            episode = seasonandep % 100;
-            season = Math.Max((seasonandep - episode) / 100, 1);
-          }
-          else if (seriesreg0.Groups[10].Value != "")
-          {
-            var seasonandep = System.Int32.Parse(seriesreg0.Groups[10].Value);
-            episode = seasonandep % 100;
-            season = Math.Max((seasonandep - episode) / 100, 1);
-          }
-          else
-          {
-            Console.WriteLine(seriesreg0);
-          }
-
+          isSeries = true;
+          var ttt = trynice as Formatting.NiceSeriesName;
           var xx = "-";
-          if (episode > 0 && season > 0)
+          if (ttt.Episode > 0 && ttt.Season > 0)
           {
-            xx = String.Format("{0}x{1}", season, episode);
+            xx = String.Format("{0}x{1}", ttt.Season, ttt.Episode);
           }
           else
           {
-            if (episode > 0)
+            if (ttt.Episode > 0)
             {
-              xx = episode.ToString();
+              xx = ttt.Episode.ToString();
             }
             else
             {
-              xx = season.ToString();
+              xx = ttt.Season.ToString();
             }
           }
           this.title = xx;
+          this.seriesname = ttt.Name;
+        } else if (trynice is Formatting.MovieName)
+        { 
+          var n = trynice as Formatting.MovieName;
+          isSeries = false;
+          this.seriesname = String.Format("{0} ({1})", n.Name,n.Year);
+         } else {
+          isSeries = false;
           this.seriesname = System.IO.Directory.GetParent(this.Path).Name;
-        }
-        else
-        {
-          var t = movieclear.Match(System.IO.Directory.GetParent(this.Path).Name);
-          if (t.Success)
-          {
-            this.seriesname = String.Format("{0} ({1})", t.Groups[1].Value, t.Groups[3].Value);
-          }
-          else
-          {
-            var t2 = movieclear.Match(this.Item.Name);
-            if (t2.Success)
-            {
-              this.seriesname = String.Format("{0} ({1})", t2.Groups[1].Value, t2.Groups[3].Value);
-            }
-            else
-            {
-              this.seriesname = System.IO.Directory.GetParent(this.Path).Name;
-            }
-          }
-          this.seriesname = this.seriesname.Replace(".", " ").Replace("_", " ");
-        }
+        }    
       }
     }
 
