@@ -245,7 +245,8 @@ namespace NMaier
       int[] shouldUpdate;
       if (!forced)
       {
-        var updatesince = TheTVDB.UpdatesSince(since);
+        //var updatesince = TheTVDB.UpdatesSince(since);
+        var updatesince = TheTVDB.FetchUpdate("month");
         shouldUpdate = updatesince.Series.Where(id => TheTVDB.cacheshow.ContainsKey(id)).ToArray();
 
         var s2 = updatesince.Episodes.Select(epid => (TheTVDB.cacheshow.ToArray().Where(tv => tv.Value.TVEpisodes.Where(ep => ep.EpisodeId == 1).Count() > 0)).Select (x => x.Key).ToArray()).ToArray();

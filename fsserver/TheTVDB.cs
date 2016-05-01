@@ -273,6 +273,52 @@ namespace NMaier
       public Int32[] Episodes { get; set; }
 
     }
+    public static UpdateInfo FetchUpdate (string timeframe)
+    {
+      if (String.IsNullOrEmpty(timeframe))
+      {
+        timeframe = "month"; // day, week, all
+      }
+      var url = String.Format("http://thetvdb.com/api/{0}/updates/updates_{1}.zip", tvdbkey, timeframe);
+      byte[] xmlData;
+
+      using (var wc = new System.Net.WebClient())
+      {
+        xmlData = wc.DownloadData(url);
+      }
+
+      var xmlStream = new System.IO.MemoryStream(xmlData);
+      ZipArchive archive = new ZipArchive(xmlStream, ZipArchiveMode.Read);
+
+      foreach (var a in archive.Entries)
+      {
+        if (a.Name == "updates_" + timeframe + ".xml")
+        {
+          UpdateInfo info = new UpdateInfo();
+          var memoryStream = new System.IO.MemoryStream();
+          var x = a.Open();
+          x.CopyTo(memoryStream);
+          var t = memoryStream.ToArray();
+
+          string xmlStr = System.Text.Encoding.UTF8.GetString(t);
+          var xmlDoc = new System.Xml.XmlDocument();
+          xmlDoc.LoadXml(xmlStr);
+
+          var s = xmlDoc.SelectNodes("//Series").OfType<XmlNode>();
+          info.Series = (from n in s
+                         select System.Int32.Parse(n.SelectSingleNode("//id").InnerText)).ToArray();
+
+          var e = xmlDoc.SelectNodes("//Episode").OfType<XmlNode>();
+          info.Episodes = (from n in e
+                           select System.Int32.Parse(n.SelectSingleNode("//id").InnerText)).ToArray();
+
+          return info;
+
+        }
+      }
+      return null;
+
+    }
     public static UpdateInfo UpdatesSince(long time)
     {
       UpdateInfo info = new UpdateInfo();
