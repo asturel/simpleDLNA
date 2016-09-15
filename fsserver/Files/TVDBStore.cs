@@ -239,7 +239,7 @@ namespace NMaier
       this.InsertMany(datax);
     }
 
-    private void CheckUpdates(long since, bool forced=false)
+    private void CheckUpdates(bool forced=false)
     {
 
       int[] shouldUpdate;
@@ -273,6 +273,10 @@ namespace NMaier
       InsertMany(updatedData);
       StoreLastUpdateDate(System.DateTime.Now);
     }
+    private void updateDB(object state)
+    {
+      CheckUpdates(false);
+    }
     public TVStore()
     {
       if (!initialized)
@@ -300,13 +304,15 @@ namespace NMaier
         if (System.DateTime.Now - lastUpdated > maxDiff)
         {
           try {
-            CheckUpdates(EpochTimeExtensions.ToEpochTime(lastUpdated), false);
+            //CheckUpdates(EpochTimeExtensions.ToEpochTime(lastUpdated), false);
+            CheckUpdates(false);
           } catch (Exception e)
           {
             logger.Error(String.Format("TV: Failed to check updates"), e);
           }
         }
         initialized = true;
+        new System.Threading.Timer(updateDB, null, TimeSpan.FromDays(1.0), TimeSpan.FromDays(1.0));
       }
     }
   }
