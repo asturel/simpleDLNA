@@ -10,7 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
-
+using System.ServiceProcess;
 namespace NMaier.SimpleDlna
 {
   public static class Program
@@ -23,7 +23,8 @@ namespace NMaier.SimpleDlna
     private static void CancelKeyPressed(object sender,
                                          ConsoleCancelEventArgs e)
     {
-      if (CancelHitCount++ == 3) {
+      if (CancelHitCount++ == 3)
+      {
         LogManager.GetLogger(typeof(Program)).Fatal(
           "Emergency exit commencing");
         return;
@@ -42,7 +43,8 @@ namespace NMaier.SimpleDlna
       Console.WriteLine("Available orders:");
       Console.WriteLine("----------------");
       Console.WriteLine();
-      foreach (var i in items) {
+      foreach (var i in items)
+      {
         Console.WriteLine("  - " + i);
         Console.WriteLine();
       }
@@ -56,58 +58,237 @@ namespace NMaier.SimpleDlna
       Console.WriteLine("Available views:");
       Console.WriteLine("----------------");
       Console.WriteLine();
-      foreach (var i in items) {
+      foreach (var i in items)
+      {
         Console.WriteLine("  - " + i);
         Console.WriteLine();
       }
     }
+    private static void Startx(string[] args)
+    {
+      // onstart code here
+    }
 
-    private static void Main(string[] args)
+    private static void Stop()
+    {
+      // onstop code here
+    }
+
+    #region Nested classes to support running as service
+    public const string ServiceName = "SimpleDLNA";
+
+    public class Service : ServiceBase
+    {
+      protected string[] StartupArgs = new string[] { };
+      HttpServer server;
+      public Service(string[] startupargs)
+      {
+        ServiceName = Program.ServiceName;
+        StartupArgs = startupargs;
+        CanStop = true;
+        CanShutdown = true;
+        System.Environment.CurrentDirectory = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+      }
+
+      protected override void OnStart(string[] args)
+      {
+        System.Environment.CurrentDirectory = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+        //Program.Start(StartupArgs);
+        var options = new Options();
+        try
+        {
+
+          options.Parse(StartupArgs);
+          if (options.ShowHelp)
+          {
+            //options.PrintUsage();
+            return;
+          }
+          if (options.ShowVersion)
+          {
+            //ShowVersion();
+            return;
+          }
+          if (options.ShowLicense)
+          {
+            //ShowLicense();
+            return;
+          }
+          if (options.ListViews)
+          {
+            //ListViews();
+            return;
+          }
+          if (options.ListOrders)
+          {
+            //ListOrders();
+            return;
+          }
+          if (options.Directories.Length == 0)
+          {
+            throw new GetOptException("No directories specified");
+          }
+
+          options.SetupLogging();
+
+          using (var icon = new ProgramIcon())
+          {
+            server = new HttpServer(options.Port);
+            try
+            {
+              using (var authorizer = new HttpAuthorizer(server))
+              {
+                if (options.Ips.Length != 0)
+                {
+                  authorizer.AddMethod(new IPAddressAuthorizer(options.Ips));
+                }
+                if (options.Macs.Length != 0)
+                {
+                  authorizer.AddMethod(new MacAuthorizer(options.Macs));
+                }
+                if (options.UserAgents.Length != 0)
+                {
+                  authorizer.AddMethod(
+                    new UserAgentAuthorizer(options.UserAgents));
+                }
+
+                var types = options.Types[0];
+                foreach (var t in options.Types)
+                {
+                  types = types | t;
+                  server.InfoFormat("Enabled type {0}", t);
+                }
+
+                var friendlyName = "sdlna";
+
+                if (options.Seperate)
+                {
+                  foreach (var d in options.Directories)
+                  {
+                    server.InfoFormat("Mounting FileServer for {0}", d.FullName);
+                    var fs = SetupFileServer(
+                      options, types, new DirectoryInfo[] { d });
+                    friendlyName = fs.FriendlyName;
+                    server.RegisterMediaServer(fs);
+                    server.NoticeFormat("{0} mounted", d.FullName);
+                  }
+                }
+                else
+                {
+                  server.InfoFormat(
+                    "Mounting FileServer for {0} ({1})",
+                    options.Directories[0], options.Directories.Length);
+                  var fs = SetupFileServer(options, types, options.Directories);
+                  friendlyName = fs.FriendlyName;
+                  server.RegisterMediaServer(fs);
+                  server.NoticeFormat(
+                    "{0} ({1}) mounted",
+                    options.Directories[0], options.Directories.Length);
+                }
+              }
+            }
+            finally
+            {
+              //server.Dispose();
+            }
+          }
+        }
+        catch (GetOptException ex)
+        {
+          Console.Error.WriteLine("Error: {0}\n\n", ex.Message);
+          options.PrintUsage();
+        }
+#if !DEBUG
+      catch (Exception ex) {
+        LogManager.GetLogger(typeof(Program)).Fatal("Failed to run", ex);
+      }
+#endif
+
+      }
+
+      protected override void OnStop()
+      {
+        server.Dispose();
+      }
+      protected override void OnShutdown()
+      {
+        server.Dispose();
+      }
+    }
+    #endregion
+    static void Main(string[] args)
+    {
+      if (!Environment.UserInteractive)
+        // running as service
+
+        using (var service = new Service(args))
+          ServiceBase.Run(service);
+      else
+      {
+        Start(args);
+        Stop();
+      }
+    }
+
+    private static void Start(string[] args)
     {
       Console.WriteLine();
       var options = new Options();
-      try {
+      try
+      {
         Console.TreatControlCAsInput = false;
         Console.CancelKeyPress += CancelKeyPressed;
 
         options.Parse(args);
-        if (options.ShowHelp) {
+        if (options.ShowHelp)
+        {
           options.PrintUsage();
           return;
         }
-        if (options.ShowVersion) {
+        if (options.ShowVersion)
+        {
           ShowVersion();
           return;
         }
-        if (options.ShowLicense) {
+        if (options.ShowLicense)
+        {
           ShowLicense();
           return;
         }
-        if (options.ListViews) {
+        if (options.ListViews)
+        {
           ListViews();
           return;
         }
-        if (options.ListOrders) {
+        if (options.ListOrders)
+        {
           ListOrders();
           return;
         }
-        if (options.Directories.Length == 0) {
+        if (options.Directories.Length == 0)
+        {
           throw new GetOptException("No directories specified");
         }
 
         options.SetupLogging();
 
-        using (var icon = new ProgramIcon()) {
+        using (var icon = new ProgramIcon())
+        {
           var server = new HttpServer(options.Port);
-          try {
-            using (var authorizer = new HttpAuthorizer(server)) {
-              if (options.Ips.Length != 0) {
+          try
+          {
+            using (var authorizer = new HttpAuthorizer(server))
+            {
+              if (options.Ips.Length != 0)
+              {
                 authorizer.AddMethod(new IPAddressAuthorizer(options.Ips));
               }
-              if (options.Macs.Length != 0) {
+              if (options.Macs.Length != 0)
+              {
                 authorizer.AddMethod(new MacAuthorizer(options.Macs));
               }
-              if (options.UserAgents.Length != 0) {
+              if (options.UserAgents.Length != 0)
+              {
                 authorizer.AddMethod(
                   new UserAgentAuthorizer(options.UserAgents));
               }
@@ -115,15 +296,18 @@ namespace NMaier.SimpleDlna
               Console.Title = "SimpleDLNA - starting ...";
 
               var types = options.Types[0];
-              foreach (var t in options.Types) {
+              foreach (var t in options.Types)
+              {
                 types = types | t;
                 server.InfoFormat("Enabled type {0}", t);
               }
 
               var friendlyName = "sdlna";
 
-              if (options.Seperate) {
-                foreach (var d in options.Directories) {
+              if (options.Seperate)
+              {
+                foreach (var d in options.Directories)
+                {
                   server.InfoFormat("Mounting FileServer for {0}", d.FullName);
                   var fs = SetupFileServer(
                     options, types, new DirectoryInfo[] { d });
@@ -132,7 +316,8 @@ namespace NMaier.SimpleDlna
                   server.NoticeFormat("{0} mounted", d.FullName);
                 }
               }
-              else {
+              else
+              {
                 server.InfoFormat(
                   "Mounting FileServer for {0} ({1})",
                   options.Directories[0], options.Directories.Length);
@@ -149,12 +334,14 @@ namespace NMaier.SimpleDlna
               Run(server);
             }
           }
-          finally {
+          finally
+          {
             server.Dispose();
           }
         }
       }
-      catch (GetOptException ex) {
+      catch (GetOptException ex)
+      {
         Console.Error.WriteLine("Error: {0}\n\n", ex.Message);
         options.PrintUsage();
       }
@@ -180,30 +367,38 @@ namespace NMaier.SimpleDlna
     {
       var ids = new Identifiers(
         ComparerRepository.Lookup(options.Order), options.DescendingOrder);
-      foreach (var v in options.Views) {
-        try {
+      foreach (var v in options.Views)
+      {
+        try
+        {
           ids.AddView(v);
         }
-        catch (RepositoryLookupException) {
+        catch (RepositoryLookupException)
+        {
           throw new GetOptException("Invalid view " + v);
         }
       }
       var fs = new FileServer(types, ids, d);
-      if (!string.IsNullOrEmpty(options.FriendlyName)) {
+      if (!string.IsNullOrEmpty(options.FriendlyName))
+      {
         fs.FriendlyName = options.FriendlyName;
       }
       fs.ShowHidden = options.ShowHidden;
       fs.ShowSample = options.ShowSample;
-      try {
-        if (options.CacheFile != null) {
+      try
+      {
+        if (options.CacheFile != null)
+        {
           fs.SetCacheFile(options.CacheFile);
         }
         fs.Load();
-        if (!options.Rescanning) {
+        if (!options.Rescanning)
+        {
           fs.Rescanning = false;
         }
       }
-      catch (Exception) {
+      catch (Exception)
+      {
         fs.Dispose();
         throw;
       }
