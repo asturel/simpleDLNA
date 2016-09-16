@@ -2,7 +2,9 @@
 using NMaier.SimpleDlna.Utilities;
 using System;
 using System.IO;
+using System.Runtime.Serialization;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace NMaier.SimpleDlna.Server
 {
@@ -25,17 +27,31 @@ namespace NMaier.SimpleDlna.Server
       ".vtt", ".VTT"
       };
 
+    [NonSerialized]
+    private static Regex stylingRegex = new Regex(@"^<font.*?>(.*?)</font>$", RegexOptions.Multiline | RegexOptions.Singleline | RegexOptions.Compiled);
+
     private string text = null;
+
+    [OptionalField(VersionAdded = 2)]
+    //[System.ComponentModel.DefaultValue(false)]
+    public bool isInternal = false;
+
+    [OptionalField(VersionAdded = 2)]
+    //[System.ComponentModel.DefaultValue(typeof(string), null)]
+    public string subPath = null;
+
+    [OptionalField(VersionAdded = 2)]
+    //[System.ComponentModel.DefaultValue(typeof(DateTime),"")]
+    private DateTime lastmodified = DateTime.UtcNow;
 
     public Subtitle()
     {
     }
 
-    public Subtitle(FileInfo file)
+    public Subtitle(FileInfo file, bool hasASSSub)
     {
-      Load(file);
+      Load(file, hasASSSub);
     }
-
     public Subtitle(string text)
     {
       this.text = text;
@@ -73,7 +89,8 @@ namespace NMaier.SimpleDlna.Server
     {
       get
       {
-        return DateTime.UtcNow;
+        //return DateTime.UtcNow;
+        return lastmodified;
       }
     }
 
@@ -128,6 +145,8 @@ namespace NMaier.SimpleDlna.Server
         }
         rv.Add("Date", InfoDate.ToString());
         rv.Add("DateO", InfoDate.ToString("o"));
+        rv.Add("Content", text);
+        rv.Add("Internal", isInternal.ToString());
         return rv;
       }
     }
@@ -148,7 +167,29 @@ namespace NMaier.SimpleDlna.Server
       }
     }
 
-    private void Load(FileInfo file)
+    private System.Text.Encoding GetEncoding(string filename)
+    {
+      using (FileStream fs = File.OpenRead(filename))
+      {
+        Ude.CharsetDetector cdet = new Ude.CharsetDetector();
+        cdet.Feed(fs);
+        cdet.DataEnd();
+        if (cdet.Charset != null)
+        {
+          Console.WriteLine("Charset: {0}, confidence: {1}",
+               cdet.Charset, cdet.Confidence);
+          return System.Text.Encoding.GetEncoding(cdet.Charset);
+
+        }
+        else
+        {
+          Console.WriteLine("Detection failed.");
+          return null;
+        }
+      }
+    }
+
+    private void Load(FileInfo file, bool hasASSSub)
     {
       try {
         // Try external
@@ -162,7 +203,23 @@ namespace NMaier.SimpleDlna.Server
             if (!sti.Exists) {
               continue;
             }
-            text = System.IO.File.ReadAllText(sti.FullName,System.Text.Encoding.GetEncoding("iso-8859-2")); //FFmpeg.GetSubtitleSubrip(sti);
+            //text = System.IO.File.ReadAllText(sti.FullName,System.Text.Encoding.GetEncoding("iso-8859-2")); //FFmpeg.GetSubtitleSubrip(sti);
+            Encoding encoding = null;
+            try {
+              encoding = GetEncoding(sti.FullName);
+            } catch (Exception e)
+            {
+              logger.Error("Encoding", e);
+              encoding = System.Text.Encoding.GetEncoding("iso-8859-2");
+            }
+            // fallback
+            if (encoding == null)
+            {
+              encoding = System.Text.Encoding.GetEncoding("iso-8859-2");
+            }
+            text = System.Text.Encoding.UTF8.GetString(System.Text.Encoding.Convert(encoding, System.Text.Encoding.UTF8, (System.IO.File.ReadAllBytes(sti.FullName))));
+            subPath = sti.FullName;
+            lastmodified = sti.LastWriteTimeUtc;
           }
           catch (NotSupportedException) {
           }
@@ -172,7 +229,13 @@ namespace NMaier.SimpleDlna.Server
           }
         }
         try {
-          //text = FFmpeg.GetSubtitleSubrip(file);
+          if (string.IsNullOrEmpty(text) && hasASSSub)
+          {
+            logger.Info(string.Format("Extracting subtitle from {0}", file.FullName));
+            text = stylingRegex.Replace(FFmpeg.GetSubtitleSubrip(file),"$1");
+            isInternal = true;
+          }
+
         }
         catch (NotSupportedException) {
         }

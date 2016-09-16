@@ -265,7 +265,7 @@ namespace NMaier.SimpleDlna.Utilities
               var rv = string.Empty;
               string line;
               while ((line = reader.ReadLine()) != null) {
-                rv += regAssStrip.Replace(line.Trim(), string.Empty) + "\n";
+                rv += line.Trim() + "\n"; //regAssStrip.Replace(line.Trim(), string.Empty) + "\n";
               }
               if (!string.IsNullOrWhiteSpace(rv)) {
                 return rv;

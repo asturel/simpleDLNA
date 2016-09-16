@@ -5,6 +5,8 @@ using System.IO;
 using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
 using NMaier.SimpleDlna.Utilities;
+using System.Linq;
+using System.Reflection;
 
 namespace NMaier.SimpleDlna.FileMediaServer
 {
@@ -43,18 +45,24 @@ namespace NMaier.SimpleDlna.FileMediaServer
     private int? season;
     private int? episode;
 
+    private bool hasInternalSubtitle = false;
+    private bool isInternalSubtitleASS = false;
+
     private bool isSeries = false;
-/*
-    private readonly static Regex seriesreg = new Regex(
-            //@"(([0-9]{1,2})x([0-9]{1,2})|S([0-9]{1,2})+E([0-9]{1,2}))",
-            @"(([^0-9][0-9]{1,2})x([0-9]{1,2}[^0-9])|[ \._\-]([0-9]{3})([ \._\-]|$)|(S([0-9]{1,2})+(E([0-9]{1,2})| ))|[_ -]([0-9]{1,3})[\._ -][^\dsS])",
-            RegexOptions.Compiled | RegexOptions.IgnoreCase
-            );
-    private readonly static Regex movieclear = new Regex(
-            @"(.*?)[._ ]?(([0-9]{4})|[0-9]{3,4}p)",
-            RegexOptions.Compiled | RegexOptions.IgnoreCase
-            );
-*/
+
+    private static BindingFlags tagLibBindigFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
+    private static FieldInfo tagLibField = typeof(TagLib.Matroska.Track).GetField("track_codec_id", tagLibBindigFlags);
+    /*
+        private readonly static Regex seriesreg = new Regex(
+                //@"(([0-9]{1,2})x([0-9]{1,2})|S([0-9]{1,2})+E([0-9]{1,2}))",
+                @"(([^0-9][0-9]{1,2})x([0-9]{1,2}[^0-9])|[ \._\-]([0-9]{3})([ \._\-]|$)|(S([0-9]{1,2})+(E([0-9]{1,2})| ))|[_ -]([0-9]{1,3})[\._ -][^\dsS])",
+                RegexOptions.Compiled | RegexOptions.IgnoreCase
+                );
+        private readonly static Regex movieclear = new Regex(
+                @"(.*?)[._ ]?(([0-9]{4})|[0-9]{3,4}p)",
+                RegexOptions.Compiled | RegexOptions.IgnoreCase
+                );
+    */
     private VideoFile(SerializationInfo info, StreamingContext ctx)
       : this(info, ctx.Context as DeserializeInfo)
     {
@@ -70,7 +78,8 @@ namespace NMaier.SimpleDlna.FileMediaServer
           this.tvshowid = TheTVDB.GetTVShowID(this.Path);
         }
         var steszt = (System.IO.Directory.GetParent(base.Path).Name).TryGetName();
-        if (steszt == null || (steszt is Formatting.NiceSeriesName && (steszt as Formatting.NiceSeriesName).Episode == 0)) {
+        if (steszt == null || (steszt is Formatting.NiceSeriesName && (steszt as Formatting.NiceSeriesName).Episode == 0))
+        {
           steszt = base.Title.TryGetName();
         }
         if (steszt == null)
@@ -101,7 +110,8 @@ namespace NMaier.SimpleDlna.FileMediaServer
             if (tvinfo != null)
             {
               this.title = tvinfo.Find(steszt2.Season, steszt2.Episode);
-            } else
+            }
+            else
             {
               this.title = String.Format("{0}x{1}", steszt2.Season, steszt2.Episode);
             }
@@ -112,11 +122,11 @@ namespace NMaier.SimpleDlna.FileMediaServer
           {
             this.title = base.Title;
           }
-          
+
           if (!String.IsNullOrEmpty(steszt.Releaser))
           {
             this.title = String.Format("{0} ({1},{2})", this.title, steszt.Resolution, steszt.Releaser);
-          } 
+          }
 
         }
         else if (steszt is Formatting.MovieName)
@@ -171,12 +181,14 @@ namespace NMaier.SimpleDlna.FileMediaServer
               this.title = t;
               this.season = steszt2.Season;
               this.episode = steszt2.Episode;
-            } else
+            }
+            else
             {
               this.title = base.Title;
             }
 
-          } else
+          }
+          else
           {
             this.title = base.Title;
           }
@@ -219,15 +231,18 @@ namespace NMaier.SimpleDlna.FileMediaServer
           }
           this.title = xx;
           this.seriesname = ttt.Name;
-        } else if (trynice is Formatting.MovieName)
-        { 
+        }
+        else if (trynice is Formatting.MovieName)
+        {
           var n = trynice as Formatting.MovieName;
           isSeries = false;
-          this.seriesname = String.Format("{0} ({1})", n.Name,n.Year);
-         } else {
+          this.seriesname = String.Format("{0} ({1})", n.Name, n.Year);
+        }
+        else
+        {
           isSeries = false;
           this.seriesname = System.IO.Directory.GetParent(this.Path).Name;
-        }    
+        }
       }
     }
 
@@ -238,7 +253,8 @@ namespace NMaier.SimpleDlna.FileMediaServer
       description = info.GetString("de");
       director = info.GetString("di");
       genre = info.GetString("g");
-      try {
+      try
+      {
         lastpos = info.GetInt64("lp");
         /*
         if (lastpos > 0)
@@ -246,32 +262,72 @@ namespace NMaier.SimpleDlna.FileMediaServer
           Error("LASTPOS FOR " + this.Path + " : " + (float)lastpos/(float)base.InfoSize*100.0);
         }
         */
-      } catch (Exception)
+      }
+      catch (Exception)
       {
         lastpos = 0;
       }
       //title = info.GetString("t");
-      try {
+      try
+      {
         width = info.GetInt32("w");
         height = info.GetInt32("h");
       }
-      catch (Exception) {
+      catch (Exception)
+      {
       }
       var ts = info.GetInt64("du");
-      if (ts > 0) {
+      if (ts > 0)
+      {
         duration = new TimeSpan(ts);
       }
-      try {
+      try
+      {
         bookmark = info.GetInt64("b");
       }
-      catch (Exception) {
+      catch (Exception)
+      {
         bookmark = 0;
       }
-      try {
+      try
+      {
         //subTitle = info.GetValue("st", typeof(Subtitle)) as Subtitle;
-        subTitle = new Subtitle(new System.IO.FileInfo(this.Path));
+        Subtitle sub = null;
+        try
+        {
+          sub = info.GetValue("st", typeof(Subtitle)) as Subtitle;
+
+          if (sub != null && !string.IsNullOrEmpty(sub.subPath))
+          {
+            var finfo = new System.IO.FileInfo(sub.subPath);
+
+            if (sub.InfoDate >= finfo.LastWriteTimeUtc)
+            {
+              subTitle = sub;
+            }
+            else
+            {
+              subTitle = new Subtitle(new System.IO.FileInfo(this.Path), isInternalSubtitleASS);
+            }
+          } else
+          {
+            if (sub != null && sub.isInternal)
+            {
+              subTitle = sub;
+            }
+            else
+            {
+              subTitle = new Subtitle(new System.IO.FileInfo(this.Path), isInternalSubtitleASS);
+            }
+          }
+        }
+        catch (Exception e) {
+          subTitle = new Subtitle(new System.IO.FileInfo(this.Path), isInternalSubtitleASS);
+        }
+        //subTitle = new Subtitle(new System.IO.FileInfo(this.Path), sub);
       }
-      catch (Exception) {
+      catch (Exception)
+      {
         subTitle = null;
       }
       try
@@ -330,8 +386,9 @@ namespace NMaier.SimpleDlna.FileMediaServer
         if (this.seriesname != null)
         {
           return this.seriesname;
-        } else { return base.Title; }
-        
+        }
+        else { return base.Title; }
+
       }
     }
     public bool IsSeries
@@ -390,7 +447,8 @@ namespace NMaier.SimpleDlna.FileMediaServer
       get
       {
         MaybeInit();
-        if (string.IsNullOrWhiteSpace(genre)) {
+        if (string.IsNullOrWhiteSpace(genre))
+        {
           throw new NotSupportedException();
         }
         return genre;
@@ -421,22 +479,28 @@ namespace NMaier.SimpleDlna.FileMediaServer
       {
         MaybeInit();
         var rv = base.Properties;
-        if (description != null) {
+        if (description != null)
+        {
           rv.Add("Description", description);
         }
-        if (actors != null && actors.Length != 0) {
+        if (actors != null && actors.Length != 0)
+        {
           rv.Add("Actors", string.Join(", ", actors));
         }
-        if (director != null) {
+        if (director != null)
+        {
           rv.Add("Director", director);
         }
-        if (duration != null) {
+        if (duration != null)
+        {
           rv.Add("Duration", duration.Value.ToString("g"));
         }
-        if (genre != null) {
+        if (genre != null)
+        {
           rv.Add("Genre", genre);
         }
-        if (width != null && height != null) {
+        if (width != null && height != null)
+        {
           rv.Add(
             "Resolution",
             string.Format("{0}x{1}", width.Value, height.Value)
@@ -450,13 +514,16 @@ namespace NMaier.SimpleDlna.FileMediaServer
     {
       get
       {
-        try {
-          if (subTitle == null) {
-            subTitle = new Subtitle(Item);
+        try
+        {
+          if (subTitle == null)
+          {
+            subTitle = new Subtitle(Item, isInternalSubtitleASS);
             Server.UpdateFileCache(this);
           }
         }
-        catch (Exception ex) {
+        catch (Exception ex)
+        {
           Error("Failed to look up subtitle", ex);
           subTitle = new Subtitle();
         }
@@ -470,7 +537,8 @@ namespace NMaier.SimpleDlna.FileMediaServer
       {
         MaybeInit();
         var t = base.Title;
-        if (!string.IsNullOrWhiteSpace(this.title)) {
+        if (!string.IsNullOrWhiteSpace(this.title))
+        {
           //return string.Format("{0} — {1}", base.Title, title);
           t = this.title;
         }
@@ -481,46 +549,66 @@ namespace NMaier.SimpleDlna.FileMediaServer
 
     private void MaybeInit()
     {
-      if (initialized) {
+      if (initialized)
+      {
         return;
       }
 
       FetchTV();
-      try {
-        using (var tl = TagLib.File.Create(new TagLibFileAbstraction(Item))) {
-          try {
+      try
+      {
+        using (var tl = TagLib.File.Create(new TagLibFileAbstraction(Item)))
+        {
+          try
+          {
             duration = tl.Properties.Duration;
-            if (duration.HasValue && duration.Value.TotalSeconds < 0.1) {
+            if (duration.HasValue && duration.Value.TotalSeconds < 0.1)
+            {
               duration = null;
             }
             width = tl.Properties.VideoWidth;
             height = tl.Properties.VideoHeight;
+            var subs = tl.Properties.Codecs.Where(c => c is TagLib.Matroska.SubtitleTrack).Select(c => c as TagLib.Matroska.Track).ToArray();
+            hasInternalSubtitle = subs.Length > 0;
+
+            if (hasInternalSubtitle)
+            {
+              isInternalSubtitleASS = subs.Any(s => (string)tagLibField.GetValue(s) == "S_TEXT/ASS");
+
+            }
           }
-          catch (Exception ex) {
+          catch (Exception ex)
+          {
             Debug("Failed to transpose Properties props", ex);
           }
 
-          try {
+          try
+          {
             var t = tl.Tag;
             genre = t.FirstGenre;
             //title = t.Title;
             description = t.Comment;
             director = t.FirstComposerSort;
-            if (string.IsNullOrWhiteSpace(director)) {
+            if (string.IsNullOrWhiteSpace(director))
+            {
               director = t.FirstComposer;
             }
             actors = t.PerformersSort;
-            if (actors == null || actors.Length == 0) {
+            if (actors == null || actors.Length == 0)
+            {
               actors = t.PerformersSort;
-              if (actors == null || actors.Length == 0) {
+              if (actors == null || actors.Length == 0)
+              {
                 actors = t.Performers;
-                if (actors == null || actors.Length == 0) {
+                if (actors == null || actors.Length == 0)
+                {
                   actors = t.AlbumArtists;
                 }
               }
             }
           }
-          catch (Exception ex) {
+          catch (Exception ex)
+          {
             Debug("Failed to transpose Tag props", ex);
           }
         }
@@ -529,17 +617,20 @@ namespace NMaier.SimpleDlna.FileMediaServer
 
         Server.UpdateFileCache(this);
       }
-      catch (TagLib.CorruptFileException ex) {
+      catch (TagLib.CorruptFileException ex)
+      {
         Debug(
           "Failed to read meta data via taglib for file " + Item.FullName, ex);
         initialized = true;
       }
-      catch (TagLib.UnsupportedFormatException ex) {
+      catch (TagLib.UnsupportedFormatException ex)
+      {
         Debug(
           "Failed to read meta data via taglib for file " + Item.FullName, ex);
         initialized = true;
       }
-      catch (Exception ex) {
+      catch (Exception ex)
+      {
         Warn(
           "Unhandled exception reading meta data for file " + Item.FullName,
           ex);
@@ -548,7 +639,8 @@ namespace NMaier.SimpleDlna.FileMediaServer
 
     public void GetObjectData(SerializationInfo info, StreamingContext context)
     {
-      if (info == null) {
+      if (info == null)
+      {
         throw new ArgumentNullException("info");
       }
       MaybeInit();
@@ -561,7 +653,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
       info.AddValue("h", height);
       info.AddValue("b", bookmark);
       info.AddValue("du", duration.GetValueOrDefault(EmptyDuration).Ticks);
-      //info.AddValue("st", subTitle);
+      info.AddValue("st", subTitle);
       info.AddValue("tvid", (tvshowid.HasValue ? tvshowid.Value : -1));
       info.AddValue("lp", base.lastpos);
       //info.AddValue("tvname", tvshow.Name);
