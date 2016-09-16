@@ -25,7 +25,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
     private readonly Guid uuid = Guid.NewGuid();
 
     private readonly Timer watchTimer =
-      new Timer(TimeSpan.FromMinutes(10).TotalMilliseconds);
+      new Timer(TimeSpan.FromHours(1).TotalMilliseconds);
 
     private readonly Regex re_sansitizeExt =
       new Regex(@"[^\w\d]+", RegexOptions.Compiled);
@@ -102,7 +102,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
       uuid = DeriveUUID();
     }
 
-    public event EventHandler Changed;
+    public event EventHandler<ChangeEvent> Changed;
 
     public event EventHandler Changing;
 
@@ -302,13 +302,41 @@ namespace NMaier.SimpleDlna.FileMediaServer
 
       Task.Factory.StartNew(() =>
       {
-        if (Changing != null) {
-          Changing.Invoke(this, EventArgs.Empty);
-        }
+      if (Changing != null) {
+        Changing.Invoke(this, EventArgs.Empty);
+      }
+      string[] toUpdate = new string[] { "" };
 
-        try {
-          NoticeFormat("Rescanning {0}...", FriendlyName);
-          DoRoot();
+      try {
+        NoticeFormat("Rescanning {0}...", FriendlyName);
+        /*
+        var oldres = this.ids.Folders.ToList();
+        var oldids = this.ids.Resources.Where(r =>
+          r.Target is VideoFile
+        ).Select(r => r.Target as VideoFile).ToList();
+        */
+        DoRoot();
+        /*
+        var x = this.ids.Resources.Where(r =>
+          r.Target is VideoFile
+        ).Select(r => r.Target as VideoFile).ToList();
+
+        var z = x.Where(r =>
+          !oldids.Exists(r2 => r2.Id == r.Id) || oldids.Exists(r2 => r2.Id == r.Id && r2.Subtitle.HasSubtitle != r.Subtitle.HasSubtitle)
+        ).ToList();
+
+        var toSearch = z.Select(v => v.Id).ToList();
+
+        //(this.ids.GetItemByPath
+        toUpdate =
+          oldres.Where(r => r.Target is VirtualFolder).Select(r => r.Target as VirtualFolder).Where(v => v.ChildItems.ToList().Exists(it => toSearch.Contains(it.Id))).Select(v => v.Id).ToArray();
+
+
+        toUpdate = toUpdate.Concat(
+          this.ids.Folders.Where(r => r.Target is VirtualFolder).Select(r => r.Target as VirtualFolder).Where(v => v.ChildItems.ToList().Exists(it => toSearch.Contains(it.Id))).Select(v => v.Id).ToArray()).ToArray();
+
+        var adsadas = this.ids.Folders.Where(r => r.Target is VirtualFolder).Select(r => (r.Target as VirtualFolder).ChildItems.ToList()).ToList();
+        */
           NoticeFormat("Done rescanning {0}...", FriendlyName);
         }
         catch (Exception ex) {
@@ -317,7 +345,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
 
 
         if (Changed != null) {
-          Changed.Invoke(this, EventArgs.Empty);
+          Changed.Invoke(this, new ChangeEvent(toUpdate));
         }
       },
       TaskCreationOptions.AttachedToParent | TaskCreationOptions.LongRunning);
