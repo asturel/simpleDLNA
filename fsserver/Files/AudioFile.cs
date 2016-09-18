@@ -7,7 +7,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
 {
   [Serializable]
   internal sealed class AudioFile
-    : BaseFile, IMediaAudioResource, ISerializable
+    : BaseFile, IMediaAudioResource
   {
     private string album;
 
@@ -29,31 +29,16 @@ namespace NMaier.SimpleDlna.FileMediaServer
 
     private int? track;
 
-    private AudioFile(SerializationInfo info, DeserializeInfo di)
-      : this(di.Server, di.Info, di.Type)
+    public AudioFile(FileServer server, FileInfo aFile, DlnaMime aType, Model.AudioFile a) : this(server, aFile, aType)
     {
-      album = info.GetString("al");
-      artist = info.GetString("ar");
-      genre = info.GetString("g");
-      performer = info.GetString("p");
-      title = info.GetString("ti");
-      try {
-        track = info.GetInt32("tr");
-      }
-      catch (Exception) {
-        // no op
-      }
-      var ts = info.GetInt64("d");
-      if (ts > 0) {
-        duration = new TimeSpan(ts);
-      }
+      album = a.Album;
+      artist = a.Artist;
+      genre = a.Genre;
+      performer = a.Performer;
+      title = a.Title;
+      track = a.Track;
+      duration = new TimeSpan(a.Duration);
       initialized = true;
-    }
-
-    private AudioFile(SerializationInfo info, StreamingContext ctx)
-      :
-      this(info, ctx.Context as DeserializeInfo)
-    {
     }
 
     internal AudioFile(FileServer server, FileInfo aFile, DlnaMime aType)
@@ -327,19 +312,19 @@ namespace NMaier.SimpleDlna.FileMediaServer
       return base.CompareTo(other);
     }
 
-    public void GetObjectData(SerializationInfo info, StreamingContext ctx)
+    public Model.AudioFile GetData(Model.Store s, Model.AudioFile a)
     {
-      if (info == null) {
-        throw new ArgumentNullException("info");
-      }
-      info.AddValue("al", album);
-      info.AddValue("ar", artist);
-      info.AddValue("g", genre);
-      info.AddValue("p", performer);
-      info.AddValue("ti", title);
-      info.AddValue("tr", track);
-      info.AddValue(
-        "d", duration.GetValueOrDefault(EmptyDuration).Ticks);
+      MaybeInit();
+      base.GetData(s, a);
+      a.Album = album;
+      a.Artist = artist;
+      a.Genre = genre;
+      a.Performer = performer;
+      a.Title = title;
+      a.Track = track;
+      a.Duration = duration.GetValueOrDefault(EmptyDuration).Ticks;
+
+      return a;
     }
 
     public override void LoadCover()

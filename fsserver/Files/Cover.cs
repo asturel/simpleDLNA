@@ -36,6 +36,13 @@ namespace NMaier.SimpleDlna.FileMediaServer
       }
     }
 
+    public Cover(Model.Cover c)
+    {
+      bytes = c.Data;
+      width = c.Width.Value;
+      height = c.Height.Value;
+    }
+
     internal Cover(FileInfo aFile, Stream aStream)
     {
       var thumb = thumber.GetThumbnail(
@@ -243,6 +250,14 @@ namespace NMaier.SimpleDlna.FileMediaServer
       info.AddValue("b", bytes);
       info.AddValue("w", width);
       info.AddValue("h", height);
+    }
+
+    public Model.Cover GetData(Model.Store store, Model.Cover scover)
+    {
+      scover.Height = height;
+      scover.Width = width;
+      scover.Data = bytes;
+      return scover;
     }
 
     public string ToComparableTitle()

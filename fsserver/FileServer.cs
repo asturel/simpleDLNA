@@ -408,7 +408,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
     internal Cover GetCover(BaseFile file)
     {
       if (store != null) {
-        return store.MaybeGetCover(file);
+        //return store.MaybeGetCover(file);
       }
       return null;
     }
@@ -474,9 +474,6 @@ namespace NMaier.SimpleDlna.FileMediaServer
       if (watchTimer != null) {
         watchTimer.Dispose();
       }
-      if (store != null) {
-        store.Dispose();
-      }
       FileStreamCache.Clear();
     }
 
@@ -524,7 +521,10 @@ namespace NMaier.SimpleDlna.FileMediaServer
       {
         try
         {
-          tvStore = new TVStore();
+          using (var conn = new Model.Store(info)) {
+            conn.Files.ToArray();
+            tvStore = new TVStore(info);
+          }
         } catch (Exception ex)
         {
           Warn("TvStore is not available; failed to load SQLite Adapter", ex);
@@ -532,7 +532,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
       }
       
       if (store != null) {
-        store.Dispose();
+        //store.Dispose();
         store = null;
       }
       try {

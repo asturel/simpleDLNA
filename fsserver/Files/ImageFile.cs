@@ -7,7 +7,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
 {
   [Serializable]
   internal sealed class ImageFile :
-    BaseFile, IMediaImageResource, ISerializable
+    BaseFile, IMediaImageResource
   {
     private string creator;
 
@@ -21,29 +21,21 @@ namespace NMaier.SimpleDlna.FileMediaServer
 
     height;
 
-    private ImageFile(SerializationInfo info, StreamingContext context)
-      : this((context.Context as DeserializeInfo).Server,
-             (context.Context as DeserializeInfo).Info,
-             (context.Context as DeserializeInfo).Type)
-    {
-    }
-
-    private ImageFile(SerializationInfo info, DeserializeInfo di)
-      : this(di.Server, di.Info, di.Type)
-    {
-      creator = info.GetString("cr");
-      description = info.GetString("d");
-      title = info.GetString("t");
-      width = info.GetInt32("w");
-      height = info.GetInt32("h");
-
-      initialized = true;
-    }
-
     internal ImageFile(FileServer server, FileInfo aFile, DlnaMime aType)
       : base(server, aFile, aType, DlnaMediaTypes.Image)
     {
     }
+
+    public ImageFile(FileServer server, FileInfo aFile, DlnaMime aType, Model.ImageFile a) : this(server, aFile, aType)
+    {
+      creator = a.Creator;
+      description = a.Description;
+      title = a.Title;
+      width = a.Width;
+      height = a.Height;
+      initialized = true;
+    }
+
 
     public string MetaCreator
     {
@@ -172,17 +164,16 @@ namespace NMaier.SimpleDlna.FileMediaServer
       }
     }
 
-    public void GetObjectData(SerializationInfo info, StreamingContext ctx)
+    public Model.ImageFile GetData(Model.Store s, Model.ImageFile f)
     {
-      if (info == null) {
-        throw new ArgumentNullException("info");
-      }
       MaybeInit();
-      info.AddValue("cr", creator);
-      info.AddValue("d", description);
-      info.AddValue("t", title);
-      info.AddValue("w", width);
-      info.AddValue("h", height);
+      base.GetData(s, f);
+      f.Creator = creator;
+      f.Description = description;
+      f.Title = title;
+      f.Width = width;
+      f.Height = height;
+      return f;
     }
   }
 }

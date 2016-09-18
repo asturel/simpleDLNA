@@ -156,7 +156,6 @@ namespace NMaier.SimpleDlna.Server.Properties {
         ///   Looks up a localized string similar to &lt;?xml version=&quot;1.0&quot;?&gt;
         /// &lt;e:propertyset xmlns:e=&quot;urn:schemas-upnp-org:event-1-0&quot;&gt;
         ///     &lt;e:property&gt;
-        ///        &lt;variableName&gt;SystemUpdateID&lt;/variableName&gt;
         ///     &lt;/e:property&gt;
         /// &lt;/e:propertyset&gt;.
         /// </summary>

@@ -29,7 +29,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
     private static readonly StringComparer comparer =
       new NaturalStringComparer(false);
 
-    protected BaseFile(FileServer server, FileInfo file, DlnaMime type,
+    public BaseFile(FileServer server, FileInfo file, DlnaMime type,
                        DlnaMediaTypes mediaType)
     {
       if (server == null) {
@@ -58,6 +58,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
       }
       title = title.StemNameBase();
     }
+
 
     protected Cover cover
     {
@@ -289,6 +290,17 @@ namespace NMaier.SimpleDlna.FileMediaServer
         comparableTitle = Title.StemCompareBase();
       }
       return comparableTitle;
+    }
+    public void GetData(Model.Store store, Model.BaseFile f)
+    {
+      
+      f.Path = this.Path;
+      f.MediaType = this.MediaType;
+      f.Type = this.Type;
+      f.SizeRaw = this.InfoSize;
+      f.Size = this.InfoSize.HasValue ? InfoSize.Value.FormatFileSize() : null;
+      f.Date = this.InfoDate;
+      f.DateO = this.InfoDate.ToString("o");
     }
   }
 }

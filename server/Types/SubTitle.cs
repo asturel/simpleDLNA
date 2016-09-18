@@ -32,16 +32,10 @@ namespace NMaier.SimpleDlna.Server
 
     private string text = null;
 
-    [OptionalField(VersionAdded = 2)]
-    //[System.ComponentModel.DefaultValue(false)]
     public bool isInternal = false;
 
-    [OptionalField(VersionAdded = 2)]
-    //[System.ComponentModel.DefaultValue(typeof(string), null)]
     public string subPath = null;
 
-    [OptionalField(VersionAdded = 2)]
-    //[System.ComponentModel.DefaultValue(typeof(DateTime),"")]
     private DateTime lastmodified = DateTime.UtcNow;
 
     public Subtitle()
@@ -55,6 +49,20 @@ namespace NMaier.SimpleDlna.Server
     public Subtitle(string text)
     {
       this.text = text;
+    }
+    public Subtitle(string text, bool isinternal, string path, DateTime modified)
+    {
+      this.text = text;
+      this.isInternal = isinternal;
+      this.subPath = path;
+      this.lastmodified = modified;
+    }
+    public string Text
+    {
+      get
+      {
+        return this.text;
+      }
     }
 
     public IMediaCoverResource Cover
@@ -176,14 +184,13 @@ namespace NMaier.SimpleDlna.Server
         cdet.DataEnd();
         if (cdet.Charset != null)
         {
-          Console.WriteLine("Charset: {0}, confidence: {1}",
-               cdet.Charset, cdet.Confidence);
+          //Console.WriteLine("Charset: {0}, confidence: {1}", cdet.Charset, cdet.Confidence);
           return System.Text.Encoding.GetEncoding(cdet.Charset);
 
         }
         else
         {
-          Console.WriteLine("Detection failed.");
+          //Console.WriteLine("Detection failed.");
           return null;
         }
       }
