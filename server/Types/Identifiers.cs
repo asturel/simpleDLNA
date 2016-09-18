@@ -58,16 +58,6 @@ namespace NMaier.SimpleDlna.Server
       }
     }
 
-    public IEnumerable<WeakReference> Folders
-    {
-      get
-      {
-        return (from i in ids.Values
-                       where (i.Target is IMediaFolder)
-                       select i).ToList();
-      }
-    }
-
     private void RegisterFolderTree(IMediaFolder folder)
     {
       foreach (var f in folder.ChildFolders) {
@@ -138,7 +128,7 @@ namespace NMaier.SimpleDlna.Server
       }
       return GetItemById(id);
     }
- 
+
     public IMediaFolder RegisterFolder(string id, IMediaFolder item)
     {
       var rv = item;

@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Net;
 using System.Reflection;
 using System.Xml;
-using System.Linq;
 
 namespace NMaier.SimpleDlna.Server
 {
@@ -79,7 +78,7 @@ namespace NMaier.SimpleDlna.Server
       }
     }
 
-    private void SendNotify(string sid, string url, string ids)
+    private void SendNotify(string sid, string url)
     {
       try {
         HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(url);
@@ -96,15 +95,8 @@ namespace NMaier.SimpleDlna.Server
         nsmgr.AddNamespace("e", "urn:schemas-upnp-org:event-1-0");
         var xProperty = doc.SelectSingleNode("//e:property", nsmgr);
 
-        
         var xElement = doc.CreateElement("SystemUpdateID");
         xElement.InnerText = systemID.ToString();
-
-        /*
-        var xElement = doc.CreateElement("ContainerUpdateIDs");
-        //var upString = ids.Select(cid => String.Format("{0},{1}",cid,systemID)).ToArray();
-        xElement.InnerText = String.Format("{0},{1}", ids, systemID);
-        */
         xProperty.AppendChild(xElement);
 
         byte[] requestBytes = new System.Text.UTF8Encoding().GetBytes(doc.OuterXml);
@@ -128,7 +120,7 @@ namespace NMaier.SimpleDlna.Server
       }
 
     }
-    private void SendNotifyForAll(string[] ids)
+    private void SendNotifyForAll()
     {
       var now = DateTime.Now;
       var list = new List<KeyValuePair<string, Tuple<string,DateTime>>>(subscribers);
@@ -138,14 +130,8 @@ namespace NMaier.SimpleDlna.Server
         {
           if (notify.Value.Item1.Contains("ContentDirectory"))
           {
-            SendNotify(notify.Key, notify.Value.Item1, "");
-            /*
             Debug("SENDING NOTIFY TO: " + notify.Value);
-            foreach (var id0 in ids)
-            {
-              SendNotify(notify.Key, notify.Value.Item1, id0);
-            }
-            */
+            SendNotify(notify.Key, notify.Value.Item1);
           }
         } else {
           Debug(String.Format("Notify {0} expired, removing", notify.Key));
@@ -154,12 +140,12 @@ namespace NMaier.SimpleDlna.Server
       }
     }
 
-    private void ChangedServer(object sender, ChangeEvent e)
+    private void ChangedServer(object sender, EventArgs e)
     {
       soapCache.Clear();
       InfoFormat("Rescanned mount {0}", Uuid);
       systemID++;
-      SendNotifyForAll(e.ObjectIDs);
+      SendNotifyForAll();
 
     }
  
@@ -289,15 +275,6 @@ namespace NMaier.SimpleDlna.Server
         var item = GetItem(id);
         return ProcessHtmlRequest(item);
       }
-      if (path.StartsWith("update/", StringComparison.Ordinal))
-      {
-        var id = path.Substring("update/".Length);
-        var item = GetItem(id);
-        
-        SendNotifyForAll(new string[]{ id });
-        return ProcessHtmlRequest(item);
-      }
-
       if (request.Method == "SUBSCRIBE") {
         var res = new StringResponse(HttpCode.Ok, string.Empty);
         string notifySid;

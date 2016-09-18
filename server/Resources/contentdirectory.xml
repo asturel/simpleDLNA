@@ -179,10 +179,6 @@
       <name>SystemUpdateID</name>
       <dataType>ui4</dataType>
     </stateVariable>
-    <stateVariable sendEvents="yes">       
-        <name>ContainerUpdateIDs</name>
-        <dataType>string</dataType>
-    </stateVariable>
     <stateVariable sendEvents="no">
       <name>A_ARG_TYPE_BrowseLetter</name>
       <dataType>string</dataType>
