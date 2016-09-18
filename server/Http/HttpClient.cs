@@ -334,7 +334,11 @@ namespace NMaier.SimpleDlna.Server
           Debug(body);
           Debug(headers);
         }
-        SetupResponse();
+        //SetupResponse();
+        if (!string.IsNullOrEmpty(path))
+        {
+          SetupResponse();
+        }
       }
       catch (Exception ex) {
         Warn(String.Format("{0} - Failed to process request", this), ex);
