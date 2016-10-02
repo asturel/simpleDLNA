@@ -267,7 +267,7 @@ namespace NMaier
       }
       var updatedData =
         (from id in shouldUpdate
-        let tvinfo = TheTVDB.GetTVShowDetails(id, true)
+        let tvinfo = TheTVDB.GetTVShowDetails(id, true).Item1
         select tvinfo).ToArray();
 
       foreach (var tv in updatedData)

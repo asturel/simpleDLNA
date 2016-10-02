@@ -114,7 +114,7 @@ namespace NMaier
           );
 
 
-    public static TVShowInfo GetTVShowDetails(int showid, bool noncache=false)
+    public static System.Tuple<TVShowInfo,bool> GetTVShowDetails(int showid, bool noncache=false)
     {
       TVShowInfo entry;
       if (!cacheshow.TryGetValue(showid, out entry) || noncache)
@@ -187,9 +187,9 @@ namespace NMaier
             cacheshow.AddOrUpdate(showid, entry, (key, oldvalue) => (oldvalue.LastUpdated > entry.LastUpdated ? oldvalue : entry));
           }
         }
-
+        return new System.Tuple<TVShowInfo, bool>(entry, true);
       }
-      return entry;
+      return new System.Tuple<TVShowInfo, bool>(entry, false);
 
     }
 
