@@ -69,7 +69,8 @@ namespace NMaier.SimpleDlna.FileMediaServer
         (from d in directories.Distinct()
          where
              (ShowHidden || (!d.Attributes.HasFlag(FileAttributes.Hidden) && !d.Name.StartsWith("."))) &&
-             (ShowSample || !d.FullName.ToLower().Contains("sample"))
+             (ShowSample || !d.FullName.ToLower().Contains("sample")) &&
+             (!File.Exists(Path.Combine(d.FullName,".noscan")))
          select d).ToArray();
 
       if (this.directories.Length == 0) {

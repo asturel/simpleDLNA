@@ -23,7 +23,8 @@ namespace NMaier.SimpleDlna.FileMediaServer
                  where 
                   m != null && m.ChildCount > 0 && 
                   (server.ShowSample || !d.FullName.ToLower().Contains("sample")) && 
-                  (server.ShowHidden || (!d.Attributes.HasFlag(FileAttributes.Hidden) && !d.Name.StartsWith(".")))
+                  (server.ShowHidden || (!d.Attributes.HasFlag(FileAttributes.Hidden) && !d.Name.StartsWith("."))) &&
+                  (!File.Exists(System.IO.Path.Combine(d.FullName, ".noscan")))
                  select m as IMediaFolder).ToList();
 
       var rawfiles = from f in dir.GetFiles("*.*")
@@ -38,7 +39,10 @@ namespace NMaier.SimpleDlna.FileMediaServer
         try {
           if ((server.ShowSample || !f.FullName.ToLower().Contains("sample")) &&
             (server.ShowHidden || (!f.Attributes.HasFlag(FileAttributes.Hidden) && !f.Name.StartsWith(".")))) {
-            files.Add(server.GetFile(this, f));
+
+            if (f.Extension == ".mkv" || !File.Exists(System.IO.Path.ChangeExtension(f.FullName, ".mkv"))) {
+              files.Add(server.GetFile(this, f));
+            }
           }
         }
         catch (Exception ex) {
