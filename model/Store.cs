@@ -35,9 +35,11 @@ namespace NMaier.SimpleDlna.Model
 
       //modelBuilder.Entity<TVDBEntry>().HasRequired<Model.TVDB>(t => t.TVDB).WithMany(t => t.Entries).Map(m => m.MapKey("Id"));//.HasForeignKey(t => t.Id);
 
-      modelBuilder.Entity<Cover>().HasOptional(c => c.File).WithOptionalDependent().WillCascadeOnDelete();
+      modelBuilder.Entity<Cover>().HasRequired(c => c.File).WithOptional(f => f.Cover);
+
       modelBuilder.Entity<Subtitle>().HasOptional(s => s.VideoFile).WithOptionalDependent().WillCascadeOnDelete();
 
+      modelBuilder.Entity<BaseFile>().HasOptional(f => f.Cover).WithRequired(c => c.File);
       modelBuilder.Entity<BaseFile>()
         .Map<VideoFile>(m => { m.Requires("Actors"); m.Requires("Description"); m.Requires("Director"); m.Requires("Genre"); m.Requires("Width"); m.Requires("Height"); m.Requires("Bookmark"); m.Requires("Duration"); m.Requires("TVDBId"); })
         .Map<AudioFile>(m => { m.Requires("Album"); m.Requires("Artist"); m.Requires("Genre"); m.Requires("Performer"); m.Requires("Duration"); })

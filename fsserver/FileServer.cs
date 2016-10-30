@@ -381,7 +381,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
     internal Cover GetCover(BaseFile file)
     {
       if (store != null) {
-        //return store.MaybeGetCover(file);
+        return store.MaybeGetCover(file);
       }
       return null;
     }
@@ -408,8 +408,12 @@ namespace NMaier.SimpleDlna.FileMediaServer
       if (store != null) {
         item = store.MaybeGetFile(this, info, type);
         if (item != null) {
-          lock (this) {
-            pendingFiles.Add(new WeakReference(item));
+          if (item.Cover == null)
+          {
+            lock (this)
+            {
+              pendingFiles.Add(new WeakReference(item));
+            }
           }
           return item;
         }

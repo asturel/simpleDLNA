@@ -120,5 +120,22 @@ namespace NMaier.SimpleDlna.FileMediaServer
         }
       }
     }
+
+    internal Cover MaybeGetCover(BaseFile file)
+    {
+      lock (clock)
+      {
+        using (var db = new Model.Store(StoreFile))
+        {
+          var r = db.Files.Where(f => f.Path == file.Path).Select(f => f.Cover).FirstOrDefault();
+          if (r == null)
+          {
+            return null;
+          }
+          return new Cover(r, file.Item);
+
+        }
+      }
+    }
   }
 }

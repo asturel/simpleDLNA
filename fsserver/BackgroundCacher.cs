@@ -45,7 +45,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
             if (mvi != null && mvi.Subtitle.HasSubtitle) {
               loadedSubTitles++;
             }
-            var x = file.Cover;
+            //var x = file.Cover;
             //if (file.Cover != null) { 
             ////if (store.HasCover(file)) {
             //  continue;

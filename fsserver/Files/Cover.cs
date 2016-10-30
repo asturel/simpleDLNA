@@ -36,11 +36,12 @@ namespace NMaier.SimpleDlna.FileMediaServer
       }
     }
 
-    public Cover(Model.Cover c)
+    public Cover(Model.Cover c, FileInfo f)
     {
       bytes = c.Data;
       width = c.Width.Value;
       height = c.Height.Value;
+      file = f;
     }
 
     internal Cover(FileInfo aFile, Stream aStream)

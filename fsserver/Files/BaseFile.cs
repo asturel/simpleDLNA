@@ -93,7 +93,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
     {
       get
       {
-        if (cover == null && !LoadCoverFromCache()) {
+        if (cover == null  && !LoadCoverFromCache()) {
           cover = new Cover(Item);
           cover.OnCoverLazyLoaded += LazyLoadedCover;
         }

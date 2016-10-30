@@ -156,10 +156,10 @@ namespace NMaier.SimpleDlna.FileMediaServer
       isInternalSubtitleASS = v.IsInternalSubtitleASS;
 
 
-      if (v.CoverId.HasValue)
-      {
-        cover = new Cover(v.Cover);
-      }
+//      if (v.CoverId.HasValue)
+//      {
+//        cover = new Cover(v.Cover, aFile);
+//      }
 
       try
       {
@@ -548,14 +548,14 @@ namespace NMaier.SimpleDlna.FileMediaServer
       v.HasInternalSubtitle = hasInternalSubtitle;
       v.IsInternalSubtitleASS = isInternalSubtitleASS;
 
-
-      if (cover != null)
+      var actCover = MaybeGetCover();
+      if (actCover != null)
       {
-        if (!v.CoverId.HasValue)
+        if (v.Cover == null)
         {
           v.Cover = store.Covers.Add(new Model.Cover());
         }
-        v.Cover = cover.GetData(store, v.Cover);
+        v.Cover = actCover.GetData(store, v.Cover);
       }
       if (subTitle != null && subTitle.HasSubtitle)
       {
