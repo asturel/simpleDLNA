@@ -96,6 +96,8 @@ namespace NMaier.SimpleDlna.Server
         { DlnaMime.ImageJPEG, "image/jpeg" },
         { DlnaMime.ImagePNG, "image/png" },
         { DlnaMime.SubtitleSRT, "text/srt" },
+        { DlnaMime.SubtitleASS, "text/x-ass" },
+        { DlnaMime.SubtitleSSA, "text/x-ssa" },
         { DlnaMime.Video3GPP, "video/3gpp" },
         { DlnaMime.VideoAVC, "video/mp4" },
         { DlnaMime.VideoAVI, "video/avi" },
@@ -145,6 +147,12 @@ namespace NMaier.SimpleDlna.Server
       } },
       { DlnaMime.SubtitleSRT, new List<string> {
         "SRT"
+      } },
+      { DlnaMime.SubtitleASS, new List<string> {
+        "ASS"
+      } },
+      { DlnaMime.SubtitleSSA, new List<string> {
+        "SSA"
       } },
       { DlnaMime.Video3GPP, new List<string> {
         "MPEG4_P2_3GPP_SP_L0B_AMR",

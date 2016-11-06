@@ -19,6 +19,8 @@
     VideoMATROSKA,
     VideoMPEG,
     VideoOGV,
-    VideoWMV
+    VideoWMV,
+    SubtitleASS,
+    SubtitleSSA
   }
 }

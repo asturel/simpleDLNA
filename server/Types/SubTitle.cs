@@ -171,6 +171,11 @@ namespace NMaier.SimpleDlna.Server
     {
       get
       {
+        if (!string.IsNullOrEmpty(subPath))
+        {
+          var ext = System.IO.Path.GetExtension(subPath).TrimStart('.');
+          return DlnaMaps.Ext2Dlna[ext];
+        }
         return DlnaMime.SubtitleSRT;
       }
     }
