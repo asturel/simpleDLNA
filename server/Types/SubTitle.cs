@@ -171,10 +171,16 @@ namespace NMaier.SimpleDlna.Server
     {
       get
       {
-        if (!string.IsNullOrEmpty(subPath))
+        try
         {
-          var ext = System.IO.Path.GetExtension(subPath).TrimStart('.');
-          return DlnaMaps.Ext2Dlna[ext];
+          if (!string.IsNullOrEmpty(subPath))
+          {
+            var ext = System.IO.Path.GetExtension(subPath.TrimStart('.'));
+            return DlnaMaps.Ext2Dlna[ext];
+          }
+        } catch (Exception e)
+        {
+          logger.Error("Subtitle Type error", e);
         }
         return DlnaMime.SubtitleSRT;
       }
@@ -236,7 +242,7 @@ namespace NMaier.SimpleDlna.Server
           catch (NotSupportedException) {
           }
           catch (Exception ex) {
-            logger.Debug(string.Format(
+            logger.Warn(string.Format(
               "Failed to get subtitle from {0}", sti.FullName), ex);
           }
         }
@@ -252,7 +258,7 @@ namespace NMaier.SimpleDlna.Server
         catch (NotSupportedException) {
         }
         catch (Exception ex) {
-          logger.Debug(string.Format(
+          logger.Warn(string.Format(
             "Failed to get subtitle from {0}", file.FullName), ex);
         }
       }
