@@ -246,12 +246,30 @@ namespace NMaier
 
     private void CheckUpdates(bool forced=false)
     {
+      var _lastupdate = GetLastUpdatedDate();
+      var now = DateTime.Now;
+      var diff = now - _lastupdate;
+      string since;
+      if (diff <= new TimeSpan(1,0,0,0))
+      {
+        since = "day";
+      }
+      else if (diff <= new TimeSpan(7,0,0,0))
+      {
+        since = "week";
+      } else if (diff <= new TimeSpan(30,0,0,0))
+      {
+        since = "month";
+      } else
+      {
+        throw new Exception("too old");
+      }
 
       int[] shouldUpdate;
       if (!forced)
       {
         //var updatesince = TheTVDB.UpdatesSince(since);
-        var updatesince = TheTVDB.FetchUpdate("month");
+        var updatesince = TheTVDB.FetchUpdate(since);
         shouldUpdate = updatesince.Series.Where(id => TheTVDB.cacheshow.ContainsKey(id)).ToArray();
 
         var s2 = updatesince.Episodes.Select(epid => (TheTVDB.cacheshow.ToArray().Where(tv => tv.Value.TVEpisodes.Where(ep => ep.EpisodeId == 1).Count() > 0)).Select (x => x.Key).ToArray()).ToArray();
