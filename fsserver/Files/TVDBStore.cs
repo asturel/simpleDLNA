@@ -68,7 +68,9 @@ namespace NMaier
     //private static FileInfo storeFile = new FileInfo("test.db");
     private static bool initialized = false;
     private DateTime lastUpdated;
-    private static TimeSpan maxDiff = new System.TimeSpan(10,0,0);
+    private static TimeSpan maxDiff = new System.TimeSpan(1,0,0);
+
+    private Timer updateTimer;
 
     private readonly static ILog logger =
           LogManager.GetLogger(typeof(TVStore));
@@ -90,7 +92,7 @@ namespace NMaier
       try {
         return (new System.DateTime(System.Int64.Parse(System.IO.File.ReadAllText("lastupdate.db"))));
       } catch (Exception) {
-        return (new System.DateTime(1970, 1, 1));
+        return DateTime.Now.AddDays(-7.0);
       }
     }
     public void InitCache()
@@ -131,7 +133,7 @@ namespace NMaier
               tvshow.Episode = rdr.GetInt32(2);
               tvshow.EpisodeId = rdr.GetInt32(3);
               tvshow.AbsoluteNumber = rdr.GetInt32(4);
-              tvshow.Title = rdr.GetString(5);
+              tvshow.Title = rdr.IsDBNull(5) ? "" : rdr.GetString(5);
               tvshow.FirstAired = DateTime.Parse(rdr.GetString(6));
 
               var tv = col[id];
@@ -247,37 +249,28 @@ namespace NMaier
     private void CheckUpdates(bool forced=false)
     {
       var _lastupdate = GetLastUpdatedDate();
-      var now = DateTime.Now;
-      var diff = now - _lastupdate;
-      string since;
-      if (diff <= new TimeSpan(1,0,0,0))
-      {
-        since = "day";
-      }
-      else if (diff <= new TimeSpan(7,0,0,0))
-      {
-        since = "week";
-      } else if (diff <= new TimeSpan(30,0,0,0))
-      {
-        since = "month";
-      } else
-      {
-        throw new Exception("too old");
-      }
+ 
 
       int[] shouldUpdate;
       if (!forced)
       {
         //var updatesince = TheTVDB.UpdatesSince(since);
-        var updatesince = TheTVDB.FetchUpdate(since);
-        shouldUpdate = updatesince.Series.Where(id => TheTVDB.cacheshow.ContainsKey(id)).ToArray();
-
-        var s2 = updatesince.Episodes.Select(epid => (TheTVDB.cacheshow.ToArray().Where(tv => tv.Value.TVEpisodes.Where(ep => ep.EpisodeId == 1).Count() > 0)).Select (x => x.Key).ToArray()).ToArray();
-        foreach (var s22 in s2)
+        try
         {
-          shouldUpdate = shouldUpdate.Concat(s22).ToArray();
+          var updatesince = TheTVDB.FetchUpdate(_lastupdate).Result;
+          shouldUpdate = updatesince.Series.Where(id => TheTVDB.cacheshow.ContainsKey(id)).ToArray();
+
+          var s2 = updatesince.Episodes.Select(epid => (TheTVDB.cacheshow.ToArray().Where(tv => tv.Value.TVEpisodes.Where(ep => ep.EpisodeId == 1).Count() > 0)).Select(x => x.Key).ToArray()).ToArray();
+          foreach (var s22 in s2)
+          {
+            shouldUpdate = shouldUpdate.Concat(s22).ToArray();
+          }
+          shouldUpdate = shouldUpdate.Distinct().ToArray();
+        } catch(Exception e)
+        {
+          logger.Error("failed to fetch updates: " + e.Message, e);
+          shouldUpdate = new int[] { };
         }
-        shouldUpdate = shouldUpdate.Distinct().ToArray();
 
       } else
       {
@@ -285,7 +278,7 @@ namespace NMaier
       }
       var updatedData =
         (from id in shouldUpdate
-        let tvinfo = TheTVDB.GetTVShowDetails(id, true).Item1
+        let tvinfo = TheTVDB.GetTVShowDetails(id, true).Result.Item1
         select tvinfo).ToArray();
 
       foreach (var tv in updatedData)
@@ -336,7 +329,7 @@ namespace NMaier
           }
         }
         initialized = true;
-        new System.Threading.Timer(updateDB, null, TimeSpan.FromDays(1.0), TimeSpan.FromDays(1.0));
+        updateTimer = new Timer(updateDB, null, TimeSpan.FromHours(1.0), TimeSpan.FromHours(1.0));
       }
     }
   }

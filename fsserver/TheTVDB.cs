@@ -11,6 +11,10 @@ using System.Linq;
 using System.IO.Compression;
 using System.Text.RegularExpressions;
 using log4net;
+using TvDbSharper;
+using TvDbSharper.BaseSchemas;
+using TvDbSharper.Clients.Series.Json;
+
 namespace NMaier
 {
 
@@ -57,7 +61,8 @@ namespace NMaier
               if (season != 0 || ep.AbsoluteNumber == 0 || TVEpisodes.Count < episode)
               {
                 return ep.Episode == altepisode && ep.Season == altseason;
-              } else
+              }
+              else
               {
                 return ep.AbsoluteNumber == episode;
               }
@@ -114,86 +119,59 @@ namespace NMaier
           );
 
 
-    public static System.Tuple<TVShowInfo,bool> GetTVShowDetails(int showid, bool noncache=false)
+    public static async Task<System.Tuple<TVShowInfo, bool>> GetTVShowDetails(int showid, bool noncache = false)
     {
       TVShowInfo entry;
       if (!cacheshow.TryGetValue(showid, out entry) || noncache)
       {
-        var url = String.Format("http://thetvdb.com/api/{1}/series/{0}/all/en.zip", showid, tvdbkey);
-        byte[] xmlData;
-        
-        using (var wc = new System.Net.WebClient())
+
+        var client = new TvDbClient();
+        await client.Authentication.AuthenticateAsync(tvdbkey);
+        var tasks = new List<Task<TvDbResponse<BasicEpisode[]>>>();
+
+        var firstResponse = await client.Series.GetEpisodesAsync(showid, 1);
+
+        for (int i = 2; i <= firstResponse.Links.Last; i++)
         {
-          xmlData = wc.DownloadData(url);
+          tasks.Add(client.Series.GetEpisodesAsync(showid, i));
         }
 
-        var xmlStream = new System.IO.MemoryStream(xmlData);
-        ZipArchive archive = new ZipArchive(xmlStream, ZipArchiveMode.Read);
+        var series = await client.Series.GetAsync(showid);
 
-        foreach (var a in archive.Entries)
+        var results = await Task.WhenAll(tasks);
+
+        var episodes = firstResponse.Data.Concat(results.SelectMany(x => x.Data));
+        entry = new TVShowInfo
         {
-          if (a.Name == "en.xml")
+          ID = series.Data.Id,
+          IMDBID = series.Data.ImdbId,
+          LastUpdated = series.Data.LastUpdated,
+          Name = series.Data.SeriesName,
+          TVEpisodes = episodes.Select(e =>
           {
-            var memoryStream = new System.IO.MemoryStream();
-            var x = a.Open();
-            x.CopyTo(memoryStream);
-            var t = memoryStream.ToArray();
-
-            string xmlStr = System.Text.Encoding.UTF8.GetString(t);
-            var xmlDoc = new System.Xml.XmlDocument();
-            xmlDoc.LoadXml(xmlStr);
-
-            entry = new TVShowInfo();
-            entry.ID = showid;
-            entry.Name = xmlDoc.SelectSingleNode("//SeriesName").InnerText;
-            entry.LastUpdated = System.Int64.Parse(xmlDoc.SelectSingleNode(".//lastupdated").InnerText);
-            entry.IMDBID = xmlDoc.SelectSingleNode("//IMDB_ID").InnerText;
-            entry.TVEpisodes = new List<TVEpisode>();
-
-            var airtime = xmlDoc.SelectSingleNode("//Airs_Time").InnerText;
-
-            var episodes = xmlDoc.SelectNodes("//Episode");
-            foreach (XmlNode ep in episodes)
+            DateTime firstaired;
+            if (!DateTime.TryParse(e.FirstAired, out firstaired))
             {
-              var seasoninfo = new TVEpisode();
-              seasoninfo.FirstAired = new System.DateTime();
-
-              var epnum = ep.SelectSingleNode(".//EpisodeNumber").InnerText;
-              var seasonnum = ep.SelectSingleNode(".//SeasonNumber").InnerText;
-              var title = ep.SelectSingleNode(".//EpisodeName").InnerText;
-              var firstaired = ep.SelectSingleNode(".//FirstAired").InnerText;
-              var absnumber = ep.SelectSingleNode(".//absolute_number").InnerText;
-
-              DateTime faired;
-              if (!String.IsNullOrEmpty(firstaired))
-              {
-                if (DateTime.TryParse(firstaired + " " + airtime, out faired))
-                {
-                  seasoninfo.FirstAired = faired;
-                }
-              }
-
-              seasoninfo.Episode = (int)Math.Ceiling(System.Double.Parse(epnum, new System.Globalization.CultureInfo("en-US")));
-              seasoninfo.Season = (int)Math.Ceiling(System.Double.Parse(seasonnum, new System.Globalization.CultureInfo("en-US")));
-              seasoninfo.Title = title;
-              if (!string.IsNullOrEmpty(absnumber))
-              {
-                seasoninfo.AbsoluteNumber = (System.Int32.Parse(absnumber, new System.Globalization.CultureInfo("en-US")));
-              }
-              seasoninfo.EpisodeId = (System.Int32.Parse(ep.SelectSingleNode(".//EpisodeNumber").InnerText, new System.Globalization.CultureInfo("en-US")));
-
-              entry.TVEpisodes.Add(seasoninfo);
+              firstaired = DateTime.MinValue;
             }
-            cacheshow.AddOrUpdate(showid, entry, (key, oldvalue) => (oldvalue.LastUpdated > entry.LastUpdated ? oldvalue : entry));
-          }
-        }
+            return new TVEpisode
+            {
+              AbsoluteNumber = e.AbsoluteNumber ?? -1,
+              Episode = e.AiredEpisodeNumber ?? -1,
+              EpisodeId = e.AiredEpisodeNumber ?? -1,
+              FirstAired = firstaired,
+              Season = e.AiredSeason ?? -1,
+              Title = e.EpisodeName
+            };
+          }).ToList()
+        };
+        cacheshow.AddOrUpdate(showid, entry, (key, oldvalue) => (oldvalue.LastUpdated > entry.LastUpdated ? oldvalue : entry));
         return new System.Tuple<TVShowInfo, bool>(entry, true);
       }
       return new System.Tuple<TVShowInfo, bool>(entry, false);
-
     }
 
-    public static int? GetTVShowID(string path)
+    public static async Task<int?> GetTVShowID(string path)
     {
       try
       {
@@ -211,7 +189,7 @@ namespace NMaier
           sorozat = seriesreg.Match(System.IO.Path.GetFileNameWithoutExtension(path));
         }
 
-        
+
         if (sorozat.Success){
           hit = sorozat.Groups[1].Value;
           hit = regreplace.Replace(hit, @"$1 ");
@@ -228,7 +206,8 @@ namespace NMaier
         if (sorozat is SimpleDlna.Utilities.Formatting.NiceSeriesName)
         {
           hit = sorozat.Name;
-        } else
+        }
+        else
         {
           return null;
         }
@@ -238,21 +217,20 @@ namespace NMaier
 
         if (!cache.TryGetValue(hit, out entry))
         {
-          var url = String.Format("http://thetvdb.com/api/GetSeries.php?seriesname={0}", hit);
-          string xmlStr;
-          using (var wc = new System.Net.WebClient())
-          {
-            xmlStr = wc.DownloadString(url);
-          }
-          var xmlDoc = new System.Xml.XmlDocument();
-          xmlDoc.LoadXml(xmlStr);
 
-          var seriesidText = xmlDoc.SelectSingleNode("//seriesid");
-          if (seriesidText != null)
+
+          var client = new TvDbClient();
+          await client.Authentication.AuthenticateAsync(tvdbkey);
+
+          var res = await client.Search.SearchSeriesByNameAsync(hit);
+          if (res != null && res.Data.Length > 0)
           {
-            entry = System.Int32.Parse(xmlDoc.SelectSingleNode("//seriesid").InnerText);
+            entry = res.Data.First().Id;
             cache.TryAdd(hit, entry);
-          } else { 
+
+          }
+          else
+          {
             cache.TryAdd(hit, -1);
             logger.InfoFormat("TVDB: Cant find in database {0} -- {1}", path, hit);
             return 0;
@@ -273,75 +251,21 @@ namespace NMaier
       public Int32[] Episodes { get; set; }
 
     }
-    public static UpdateInfo FetchUpdate (string timeframe)
+    public static async Task<UpdateInfo> FetchUpdate(DateTime timeframe)
     {
-      if (String.IsNullOrEmpty(timeframe))
+      var client = new TvDbClient();
+      await client.Authentication.AuthenticateAsync(tvdbkey);
+      var response = await client.Updates.GetAsync(timeframe, DateTime.Now);
+
+      return new UpdateInfo
       {
-        timeframe = "month"; // day, week, all
-      }
-      var url = String.Format("http://thetvdb.com/api/{0}/updates/updates_{1}.zip", tvdbkey, timeframe);
-      byte[] xmlData;
+        Series = response?.Data?.Select(s => s.Id)?.ToArray() ?? new Int32[] { },
+        Episodes = new Int32[] { }
 
-      using (var wc = new System.Net.WebClient())
-      {
-        xmlData = wc.DownloadData(url);
-      }
-
-      var xmlStream = new System.IO.MemoryStream(xmlData);
-      ZipArchive archive = new ZipArchive(xmlStream, ZipArchiveMode.Read);
-
-      foreach (var a in archive.Entries)
-      {
-        if (a.Name == "updates_" + timeframe + ".xml")
-        {
-          UpdateInfo info = new UpdateInfo();
-          var memoryStream = new System.IO.MemoryStream();
-          var x = a.Open();
-          x.CopyTo(memoryStream);
-          var t = memoryStream.ToArray();
-
-          string xmlStr = System.Text.Encoding.UTF8.GetString(t);
-          var xmlDoc = new System.Xml.XmlDocument();
-          xmlDoc.LoadXml(xmlStr);
-
-          var s = xmlDoc.SelectNodes("//Series").OfType<XmlNode>();
-          info.Series = (from n in s
-                         select System.Int32.Parse(n.SelectSingleNode("//id").InnerText)).ToArray();
-
-          var e = xmlDoc.SelectNodes("//Episode").OfType<XmlNode>();
-          info.Episodes = (from n in e
-                           select System.Int32.Parse(n.SelectSingleNode("//id").InnerText)).ToArray();
-
-          return info;
-
-        }
-      }
-      return null;
+      };
 
     }
-    public static UpdateInfo UpdatesSince(long time)
-    {
-      UpdateInfo info = new UpdateInfo();
-      var url = String.Format("http://thetvdb.com/api/Updates.php?type=all&time={0}", time);
-      string xmlStr;
-      using (var wc = new System.Net.WebClient())
-      {
-        xmlStr = wc.DownloadString(url);
-      }
-      var xmlDoc = new System.Xml.XmlDocument();
-      xmlDoc.LoadXml(xmlStr);
 
-      var s = xmlDoc.SelectNodes("//Series").OfType<XmlNode>();
-      info.Series = (from n in s
-                   select System.Int32.Parse(n.InnerText)).ToArray();
-
-      var e = xmlDoc.SelectNodes("//Episode").OfType<XmlNode>();
-      info.Episodes = (from n in e
-                   select System.Int32.Parse(n.InnerText)).ToArray();
-
-      return info;
-
-    }
   }
 }
 
