@@ -40,6 +40,12 @@ namespace NMaier.SimpleDlna.FileMediaServer
       }
       catch (Exception e) { };
       */
+      using (var db = new Model.Store(StoreFile))
+      {
+        var coverToRemove = db.Videos.Include(v => v.Cover).Where(v => v.CoverId.HasValue).ToArray().Where(v => !System.IO.File.Exists(v.Path)).Select(v => v.Cover).ToArray();
+        db.Covers.RemoveRange(coverToRemove);
+        db.SaveChanges();
+      }
     }
 
     internal BaseFile MaybeGetFile(FileServer server, FileInfo info, DlnaMime type)
