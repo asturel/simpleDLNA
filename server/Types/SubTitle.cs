@@ -30,7 +30,7 @@ namespace NMaier.SimpleDlna.Server
     [NonSerialized]
     private static Regex stylingRegex = new Regex(@"^<font.*?>(.*?)</font>$", RegexOptions.Multiline | RegexOptions.Singleline | RegexOptions.Compiled);
 
-    private string text = null;
+    private Lazy<string> text = null;
 
     public bool isInternal = false;
 
@@ -48,11 +48,11 @@ namespace NMaier.SimpleDlna.Server
     }
     public Subtitle(string text)
     {
-      this.text = text;
+      this.text = new Lazy<string>(() => text);
     }
     public Subtitle(string text, bool isinternal, string path, DateTime modified)
     {
-      this.text = text;
+      this.text = new Lazy<string>(() => text);
       this.isInternal = isinternal;
       this.subPath = path;
       this.lastmodified = modified;
@@ -61,7 +61,7 @@ namespace NMaier.SimpleDlna.Server
     {
       get
       {
-        return this.text;
+        return this.text.Value;
       }
     }
 
@@ -77,7 +77,7 @@ namespace NMaier.SimpleDlna.Server
     {
       get
       {
-        return !string.IsNullOrWhiteSpace(text);
+        return text != null;
       }
     }
 
@@ -153,7 +153,7 @@ namespace NMaier.SimpleDlna.Server
         }
         rv.Add("Date", InfoDate.ToString());
         rv.Add("DateO", InfoDate.ToString("o"));
-        rv.Add("Content", text);
+        rv.Add("Content", text.Value);
         rv.Add("Internal", isInternal.ToString());
         return rv;
       }
@@ -235,7 +235,7 @@ namespace NMaier.SimpleDlna.Server
             {
               encoding = System.Text.Encoding.GetEncoding("iso-8859-2");
             }
-            text = System.Text.Encoding.UTF8.GetString(System.Text.Encoding.Convert(encoding, System.Text.Encoding.UTF8, (System.IO.File.ReadAllBytes(sti.FullName))));
+            text = new Lazy<string>(() => Encoding.UTF8.GetString(Encoding.Convert(encoding, Encoding.UTF8, (File.ReadAllBytes(sti.FullName)))));
             subPath = sti.FullName;
             lastmodified = sti.LastWriteTimeUtc;
           }
@@ -247,10 +247,10 @@ namespace NMaier.SimpleDlna.Server
           }
         }
         try {
-          if (string.IsNullOrEmpty(text) && hasASSSub)
+          if (text == null && hasASSSub)
           {
             logger.Info(string.Format("Extracting subtitle from {0}", file.FullName));
-            text = stylingRegex.Replace(FFmpeg.GetSubtitleSubrip(file),"$1");
+            text = new Lazy<string>(() => stylingRegex.Replace(FFmpeg.GetSubtitleSubrip(file),"$1"));
             isInternal = true;
           }
 
@@ -279,7 +279,7 @@ namespace NMaier.SimpleDlna.Server
         throw new NotSupportedException();
       }
       if (encodedText == null) {
-        encodedText = Encoding.UTF8.GetBytes(text);
+        encodedText = Encoding.UTF8.GetBytes(text.Value);
       }
       return new MemoryStream(encodedText, false);
     }

@@ -31,9 +31,23 @@ namespace NMaier.SimpleDlna.FileMediaServer
     private int? height;
 
     private bool initialized = false;
+    /*
+    private Subtitle _subtitle;
 
+    private Subtitle subTitle
+    {
+      get
+      {
+        if (_subtitle == null)
+        {
+          _subtitle = new Subtitle(new System.IO.FileInfo(this.Path), isInternalSubtitleASS);
+        }
+        return _subtitle;
+      }
+      set { _subtitle = value; }
+    }
+    */
     private Subtitle subTitle;
-
     private string title;
 
     private int? width;
@@ -61,7 +75,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
 
         if (tvshowid == null || tvshowid == -1)
         {
-          this.tvshowid = TheTVDB.GetTVShowID(this.Path);
+          this.tvshowid = TheTVDB.GetTVShowID(this.Path).Result;
         }
         var steszt = (Directory.GetParent(base.Path).Name).TryGetName();
         if (steszt == null || (steszt is Formatting.NiceSeriesName && (steszt as Formatting.NiceSeriesName).Episode == 0))
@@ -76,7 +90,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
 
         if (tvshowid != null && tvshowid > 0)
         {
-          var tvres = TheTVDB.GetTVShowDetails(this.tvshowid.Value);
+          var tvres = TheTVDB.GetTVShowDetails(this.tvshowid.Value).Result;
           tvinfo = tvres.Item1;
           if (tvres.Item2) { Server.UpdateTVCache(tvinfo); };
           this.seriesname = tvinfo.Name;
@@ -133,7 +147,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
         }
         else
         {
-          this.tvshowid = TheTVDB.GetTVShowID(this.Path);
+          this.tvshowid = TheTVDB.GetTVShowID(this.Path).Result;
         }
 
       }
@@ -142,6 +156,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
     public VideoFile(FileServer server, FileInfo aFile, DlnaMime aType, Model.VideoFile v)
    : base(server, aFile, aType, DlnaMediaTypes.Video) //this(server, aFile,aType) 
     {
+      bool shouldsave = false;
       actors = v.Actors.Split(',');
       description = v.Description;
       director = v.Director;
@@ -155,79 +170,86 @@ namespace NMaier.SimpleDlna.FileMediaServer
       hasInternalSubtitle = v.HasInternalSubtitle;
       isInternalSubtitleASS = v.IsInternalSubtitleASS;
 
+      //      if (v.CoverId.HasValue)
+      //      {
+      //        cover = new Cover(v.Cover, aFile);
+      //      }
 
-//      if (v.CoverId.HasValue)
-//      {
-//        cover = new Cover(v.Cover, aFile);
-//      }
+      //      try
+      //      {
+      //        Subtitle sub = null;
+      //        Model.Subtitle ssub = null;// v.Subtitles.FirstOrDefault();
+      //        try
+      //        {
+      //          if (ssub != null)
+      //          {
+      //            sub = new Subtitle(ssub.Data, ssub.Internal, ssub.Path, ssub.Modified);
+      //          }
+      //
+      //          if (sub != null && !string.IsNullOrEmpty(sub.subPath))
+      //          {
+      //            var finfo = new FileInfo(sub.subPath);
+      //
+      //            if (sub.InfoDate >= finfo.LastWriteTimeUtc)
+      //            {
+      //              subTitle = sub;
+      //            }
+      //            else
+      //            {
+      //              subTitle = new Subtitle(new FileInfo(this.Path), isInternalSubtitleASS);
+      //            }
+      //          }
+      //          else
+      //          {
+      //            if (sub != null && sub.isInternal)
+      //            {
+      //              subTitle = sub;
+      //            }
+      //            else
+      //            {
+      //              subTitle = new Subtitle(new System.IO.FileInfo(this.Path), isInternalSubtitleASS);
+      //            }
+      //          }
+      //        }
+      //        catch (Exception e)
+      //        {
+      //          subTitle = new Subtitle(new System.IO.FileInfo(this.Path), isInternalSubtitleASS);
+      //        }
+      //        //subTitle = new Subtitle(new System.IO.FileInfo(this.Path), sub);
+      //      }
+      //      catch (Exception)
+      //      {
+      //        subTitle = null;
+      //      }
 
-      try
-      {
-        Subtitle sub = null;
-        var ssub = v.Subtitles.FirstOrDefault();
-        try
-        {
-          if (ssub != null)
-          {
-            sub = new Subtitle(ssub.Data, ssub.Internal, ssub.Path, ssub.Modified);
-          }
-
-          if (sub != null && !string.IsNullOrEmpty(sub.subPath))
-          {
-            var finfo = new FileInfo(sub.subPath);
-
-            if (sub.InfoDate >= finfo.LastWriteTimeUtc)
-            {
-              subTitle = sub;
-            }
-            else
-            {
-              subTitle = new Subtitle(new FileInfo(this.Path), isInternalSubtitleASS);
-            }
-          }
-          else
-          {
-            if (sub != null && sub.isInternal)
-            {
-              subTitle = sub;
-            }
-            else
-            {
-              subTitle = new Subtitle(new System.IO.FileInfo(this.Path), isInternalSubtitleASS);
-            }
-          }
-        }
-        catch (Exception e)
-        {
-          subTitle = new Subtitle(new System.IO.FileInfo(this.Path), isInternalSubtitleASS);
-        }
-        //subTitle = new Subtitle(new System.IO.FileInfo(this.Path), sub);
-      }
-      catch (Exception)
-      {
-        subTitle = null;
-      }
       try
       {
         tvshowid = v.TVDBId;
-//        if (tvshowid.HasValue && tvshowid.Value > 0)
-//        {
-//          FetchTV();
-//        }
+        //        if (tvshowid.HasValue && tvshowid.Value > 0)
+        //        {
+        //          FetchTV();
+        //        }
         if (!tvshowid.HasValue)
         {
           tvshowid = 0;
-          
+
         }
         FetchTV();
+        if (!v.TVDBId.HasValue && tvshowid > 0)
+        {
+          shouldsave = true;
+        }
       }
       catch (Exception) { }
 
       //Server.UpdateFileCache(this);
       initialized = true;
-
+      if (shouldsave)
+      {
+        Server.UpdateFileCache(this);
+      }
     }
-  
+
     internal VideoFile(FileServer server, FileInfo aFile, DlnaMime aType)
       : base(server, aFile, aType, DlnaMediaTypes.Video)
     {
@@ -411,7 +433,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
           if (subTitle == null)
           {
             subTitle = new Subtitle(Item, isInternalSubtitleASS);
-            Server.UpdateFileCache(this);
+            //Server.UpdateFileCache(this);
           }
         }
         catch (Exception ex)
@@ -557,19 +579,19 @@ namespace NMaier.SimpleDlna.FileMediaServer
         }
         v.Cover = actCover.GetData(store, v.Cover);
       }
-      if (subTitle != null && subTitle.HasSubtitle)
+      if (subTitle != null && subTitle.HasSubtitle && subTitle.isInternal)
       {
         Model.Subtitle modelSub = v.Subtitles.FirstOrDefault();
         if (modelSub == null)
         {
           modelSub = new Model.Subtitle();
           v.Subtitles = new List<Model.Subtitle>() { modelSub };
-        } 
+        }
         modelSub.Internal = subTitle.isInternal;
         modelSub.Modified = subTitle.InfoDate;
         modelSub.Path = subTitle.subPath;
         modelSub.Data = subTitle.Text;
-        
+
       }
 
       return v;
