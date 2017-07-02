@@ -490,7 +490,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
               isInternalSubtitleASS = subs.Any(s => (string)tagLibField.GetValue(s) == "S_TEXT/ASS");
 
             }
-            isInternalSubtitleASS = false; //FIXME
+            //isInternalSubtitleASS = false; //FIXME
           }
           catch (Exception ex)
           {
