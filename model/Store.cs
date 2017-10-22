@@ -25,7 +25,9 @@ namespace NMaier.SimpleDlna.Model
 
     public DbSet<BaseFile> Files { get; set; }
 
-    public Store(System.IO.FileInfo dbpath) : base(new SQLiteConnection(){ ConnectionString =  new SQLiteConnectionStringBuilder(){ DataSource = dbpath.FullName, ForeignKeys = true }.ConnectionString}, true) { }
+    public Store(System.IO.FileInfo dbpath) : base(new SQLiteConnection() { ConnectionString = new SQLiteConnectionStringBuilder() { DataSource = dbpath.FullName, ForeignKeys = true }.ConnectionString }, true) { }
+
+    public Store() : this(new System.IO.FileInfo("cache2.sqlite")) { }
 
     protected override void OnModelCreating(DbModelBuilder modelBuilder)
     {
@@ -39,9 +41,9 @@ namespace NMaier.SimpleDlna.Model
 
       modelBuilder.Entity<Subtitle>().HasOptional(s => s.VideoFile).WithOptionalDependent().WillCascadeOnDelete();
 
-      modelBuilder.Entity<BaseFile>().HasOptional(f => f.Cover).WithRequired(c => c.File);
+      //modelBuilder.Entity<BaseFile>().HasOptional(f => f.Cover).WithRequired(c => c.File);
       modelBuilder.Entity<BaseFile>()
-        .Map<VideoFile>(m => { m.Requires("Actors"); m.Requires("Description"); m.Requires("Director"); m.Requires("Genre"); m.Requires("Width"); m.Requires("Height"); m.Requires("Bookmark"); m.Requires("Duration"); m.Requires("TVDBId"); })
+        .Map<VideoFile>(m => { m.Requires("Actors"); m.Requires("Description"); m.Requires("Director"); m.Requires("Genre"); m.Requires("Width"); m.Requires("Height"); m.Requires("Bookmark"); m.Requires("Duration"); m.Requires("TVDBId"); m.Requires("TVDBEntryId"); })
         .Map<AudioFile>(m => { m.Requires("Album"); m.Requires("Artist"); m.Requires("Genre"); m.Requires("Performer"); m.Requires("Duration"); })
         .Map<ImageFile>(m => { m.Requires("Creator"); m.Requires("Description"); m.Requires("Width"); m.Requires("Height"); });
 

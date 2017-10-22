@@ -55,6 +55,10 @@ namespace NMaier.SimpleDlna.Model
 
     public int? TVDBId { get; set; }
     public virtual TVDB TVDB { get; set; }
+
+    public int? TVDBEntryId { get; set; }
+    public virtual TVDBEntry TVDBEntry { get; set; }
+
     public virtual ICollection<Subtitle> Subtitles { get; set; }
   }
   //[Table("Audio")]
@@ -120,6 +124,9 @@ namespace NMaier.SimpleDlna.Model
     public int AbsoluteNumber { get; set; }
 
     public virtual TVDB TVDB { get; set; }
+
+    public virtual ICollection<VideoFile> VideoFiles { get; set; }
+
   }
 
   public class Subtitle
