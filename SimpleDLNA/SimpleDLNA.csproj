@@ -95,27 +95,19 @@
       <Link>NgenInstaller.cs</Link>
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="FormAbout.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="FormAbout.cs" />
     <Compile Include="FormAbout.Designer.cs">
       <DependentUpon>FormAbout.cs</DependentUpon>
     </Compile>
-    <Compile Include="FormMain.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="FormMain.cs" />
     <Compile Include="FormMain.Designer.cs">
       <DependentUpon>FormMain.cs</DependentUpon>
     </Compile>
-    <Compile Include="FormServer.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="FormServer.cs" />
     <Compile Include="FormServer.Designer.cs">
       <DependentUpon>FormServer.cs</DependentUpon>
     </Compile>
-    <Compile Include="FormSettings.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="FormSettings.cs" />
     <Compile Include="FormSettings.Designer.cs">
       <DependentUpon>FormSettings.cs</DependentUpon>
     </Compile>
@@ -214,10 +206,6 @@
     <ProjectReference Include="..\fsserver\fsserver.csproj">
       <Project>{50E06B21-E11A-42F0-81E2-0911E771E861}</Project>
       <Name>fsserver</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\NMaier.Windows.Forms\NMaier.Windows.Forms.csproj">
-      <Project>{56667283-ebcd-4d63-bf61-ff319cb28a0b}</Project>
-      <Name>NMaier.Windows.Forms</Name>
     </ProjectReference>
     <ProjectReference Include="..\server\server.csproj">
       <Project>{232A96F6-A2BF-44C8-B623-6E411F6296F2}</Project>
