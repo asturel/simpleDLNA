@@ -434,10 +434,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
     }
     internal void UpdateTVCache (TVShowInfo tvinfo)
     {
-      if (tvStore != null)
-      {
-        tvStore.Insert(tvinfo);
-      }
+      tvStore?.Insert(tvinfo);
     }
 
     public void Dispose()
