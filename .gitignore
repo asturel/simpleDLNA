@@ -10,3 +10,8 @@ setup/Release
 setup/*.cmd
 pages/
 cov-int*
+/release*
+*.bak
+/release.zip
+*.patch
+/.vs/sdlna/v15
