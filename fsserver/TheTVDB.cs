@@ -1,4 +1,4 @@
-﻿using NMaier.SimpleDlna.Server.Metadata;
+using NMaier.SimpleDlna.Server.Metadata;
 using NMaier.SimpleDlna.Utilities;
 using System;
 using System.Collections.Concurrent;
@@ -12,8 +12,9 @@ using System.IO.Compression;
 using System.Text.RegularExpressions;
 using log4net;
 using TvDbSharper;
-using TvDbSharper.BaseSchemas;
-using TvDbSharper.Clients.Series.Json;
+using TvDbSharper.Dto;
+//using TvDbSharper.BaseSchemas;
+//using TvDbSharper.Clients.Series.Json;
 
 namespace NMaier
 {
@@ -44,7 +45,7 @@ namespace NMaier
       TVEpisodes = new List<TVEpisode>();
     }
 
-    public string Find(int season, int episode)
+    public string Find(int season, int episode, SimpleDlna.FileMediaServer.FileServer server)
     {
       int altepisode = episode;
       int altseason = season;
@@ -68,6 +69,25 @@ namespace NMaier
               }
             }
         );
+      if (res == null)
+      {
+        res = this.TVEpisodes.Find(ep => ep.Season == altseason && ep.Episode == altepisode);
+      }
+
+      if (res == null)
+      {
+        var up = TheTVDB.GetTVShowDetails(this.ID, true).Result.Item1;
+        if (this.TVEpisodes.Count != up.TVEpisodes.Count)
+        {
+          this.IMDBID = up.IMDBID;
+          this.LastUpdated = up.LastUpdated;
+          this.Name = up.Name;
+          this.TVEpisodes = up.TVEpisodes;
+          server.UpdateTVCache(up);
+          this.Find(season, episode, server);
+        }
+
+      }
 
       string ret = "";
       if (res != null)
@@ -95,6 +115,22 @@ namespace NMaier
     public static readonly ConcurrentDictionary<int, TVShowInfo> cacheshow = new ConcurrentDictionary<int, TVShowInfo>(); // :(
     private static readonly ConcurrentDictionary<string, int> cache = new ConcurrentDictionary<string, int>();
     private static readonly string tvdbkey = System.Configuration.ConfigurationSettings.AppSettings["TVShowDBKey"];
+    private static DateTime lastAuth = DateTime.MinValue;
+    private static TvDbClient client = new TvDbClient();
+    private static readonly TimeSpan maxDiff = new TimeSpan(10, 0, 0);
+    private static async Task auth()
+    {
+      var now = DateTime.Now;
+      if (lastAuth == DateTime.MinValue)
+      {
+        await client.Authentication.AuthenticateAsync(tvdbkey);
+        lastAuth = now;
+      }  else if (now-lastAuth > maxDiff)
+      {
+        await client.Authentication.RefreshTokenAsync();
+        lastAuth = now;
+      }
+    }
     private readonly static ILog logger =
           LogManager.GetLogger(typeof(TVStore));
 
@@ -119,14 +155,19 @@ namespace NMaier
           );
 
 
+    public static Dictionary<int, DateTime> lastRequest = new Dictionary<int, DateTime>();
+    private static TimeSpan cacheInterval = new TimeSpan(10, 0, 0);
+
     public static async Task<System.Tuple<TVShowInfo, bool>> GetTVShowDetails(int showid, bool noncache = false)
     {
       TVShowInfo entry;
-      if (!cacheshow.TryGetValue(showid, out entry) || noncache)
-      {
+      var shouldTry = lastRequest.ContainsKey(showid) ? DateTime.Now - lastRequest[showid] > cacheInterval : true;
 
-        var client = new TvDbClient();
-        await client.Authentication.AuthenticateAsync(tvdbkey);
+      if (!cacheshow.TryGetValue(showid, out entry) || (noncache && shouldTry))
+      {
+        lastRequest[showid] = DateTime.Now;
+        await auth();
+       
         var tasks = new List<Task<TvDbResponse<BasicEpisode[]>>>();
 
         var firstResponse = await client.Series.GetEpisodesAsync(showid, 1);
@@ -217,10 +258,7 @@ namespace NMaier
 
         if (!cache.TryGetValue(hit, out entry))
         {
-
-
-          var client = new TvDbClient();
-          await client.Authentication.AuthenticateAsync(tvdbkey);
+          await auth();
 
           var res = await client.Search.SearchSeriesByNameAsync(hit);
           if (res != null && res.Data.Length > 0)
@@ -253,8 +291,7 @@ namespace NMaier
     }
     public static async Task<UpdateInfo> FetchUpdate(DateTime timeframe)
     {
-      var client = new TvDbClient();
-      await client.Authentication.AuthenticateAsync(tvdbkey);
+      await auth();
       var response = await client.Updates.GetAsync(timeframe, DateTime.Now);
 
       return new UpdateInfo

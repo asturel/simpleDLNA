@@ -1,4 +1,4 @@
-﻿using NMaier.SimpleDlna.Server;
+using NMaier.SimpleDlna.Server;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -110,7 +110,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
           {
             if (tvinfo != null)
             {
-              this.title = tvinfo.Find(steszt2.Season, steszt2.Episode);
+              this.title = tvinfo.Find(steszt2.Season, steszt2.Episode, this.Server);
             }
             else
             {
