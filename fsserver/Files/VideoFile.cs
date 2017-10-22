@@ -573,7 +573,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
       var actCover = MaybeGetCover();
       if (actCover != null)
       {
-        if (v.Cover == null)
+        if (v.CoverId == null)
         {
           v.Cover = store.Covers.Add(new Model.Cover());
         }
