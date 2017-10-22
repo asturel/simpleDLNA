@@ -8,6 +8,7 @@ using System.Threading;
 
 namespace NMaier.SimpleDlna.FileMediaServer
 {
+  /*
   internal class FileStreamCache
   {
     private readonly static ILog logger =
@@ -93,6 +94,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
       stream.Kill();
     }
   }
+  */
 
   internal sealed class FileReadStream : FileStream
   {
