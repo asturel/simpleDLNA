@@ -114,7 +114,7 @@ namespace NMaier
   {
     public static readonly ConcurrentDictionary<int, TVShowInfo> cacheshow = new ConcurrentDictionary<int, TVShowInfo>(); // :(
     private static readonly ConcurrentDictionary<string, int> cache = new ConcurrentDictionary<string, int>();
-    private static readonly string tvdbkey = System.Configuration.ConfigurationSettings.AppSettings["TVShowDBKey"];
+    private static readonly string tvdbkey = System.Configuration.ConfigurationManager.AppSettings["TVShowDBKey"];
     private static DateTime lastAuth = DateTime.MinValue;
     private static TvDbClient client = new TvDbClient();
     private static readonly TimeSpan maxDiff = new TimeSpan(10, 0, 0);

@@ -1,4 +1,4 @@
-﻿using NMaier.SimpleDlna.Utilities;
+using NMaier.SimpleDlna.Utilities;
 using System;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -7,8 +7,9 @@ namespace NMaier.SimpleDlna.Server.Views
 {
   internal sealed class SeriesView : BaseView
   {
+#pragma warning disable CS0414
     private bool cascade = true;
-
+#pragma warning restore CS0414
     private readonly static Regex movieclear = new Regex(
             @"(.*?)[._ ]?(([0-9]{4})|[0-9]{3,4}p)",
             RegexOptions.Compiled | RegexOptions.IgnoreCase

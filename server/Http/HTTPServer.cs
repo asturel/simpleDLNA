@@ -1,4 +1,4 @@
-﻿using log4net;
+using log4net;
 using NMaier.SimpleDlna.Server.Ssdp;
 using NMaier.SimpleDlna.Utilities;
 using System;
@@ -269,8 +269,10 @@ namespace NMaier.SimpleDlna.Server
 
       foreach (var address in IP.ExternalIPAddresses) {
         DebugFormat("Registering device for {0}", address);
-        var lguid = 
+        var lguid =
+#pragma warning disable CS0618 // Type or member is obsolete
           new Guid(System.Text.Encoding.UTF8.GetBytes(IP.GetMAC(address).Replace(":", "") + "." + (address.Address % 256).ToString()));
+#pragma warning restore CS0618 // Type or member is obsolete
         var deviceGuid = lguid;
         var list = devicesForServers.GetOrAdd(guid, new List<Guid>());
         lock (list) {
