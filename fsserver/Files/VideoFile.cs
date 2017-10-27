@@ -420,6 +420,11 @@ namespace NMaier.SimpleDlna.FileMediaServer
             string.Format("{0}x{1}", width.Value, height.Value)
           );
         }
+        if (duration != null && Progress > 0)
+        {
+          var pos = new TimeSpan(duration.Value.Ticks * (Progress / 100));
+          rv.Add("Position", pos.ToString("g"));
+        }
         return rv;
       }
     }

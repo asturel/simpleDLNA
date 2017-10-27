@@ -195,6 +195,13 @@ namespace NMaier.SimpleDlna.Server
         e.InnerText = prop;
         item.AppendChild(e);
       }
+      if (props.TryGetValue("Position", out prop))
+      {
+        var e = item.OwnerDocument.CreateElement("upnp", "lastPlaybackPosition", NS_UPNP);
+        e.InnerText = prop;
+        item.AppendChild(e);
+      }
+      
     }
 
     private void AddVideoProperties(IRequest request,
