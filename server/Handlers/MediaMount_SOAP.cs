@@ -1,4 +1,4 @@
-﻿using NMaier.SimpleDlna.Server.Metadata;
+using NMaier.SimpleDlna.Server.Metadata;
 using NMaier.SimpleDlna.Utilities;
 using System;
 using System.Collections.Generic;
@@ -197,7 +197,7 @@ namespace NMaier.SimpleDlna.Server
       }
     }
 
-    private static void AddVideoProperties(IRequest request,
+    private void AddVideoProperties(IRequest request,
                                            IMediaResource resource,
                                            XmlElement item)
     {
@@ -222,14 +222,8 @@ namespace NMaier.SimpleDlna.Server
       // for the first time is costly. Most Samsung TVs seem to query the
       // subtitle when actually playing a file anyway (see ItemResponse), and 
       // that should be enough.
-      if (mvi.SubTitle.HasSubtitle) {
-        var surl = String.Format(
-          "http://{0}:{1}{2}subtitle/{3}/st.srt",
-          request.LocalEndPoint.Address,
-          request.LocalEndPoint.Port,
-          prefix,
-          resource.Id
-          );
+      if (mvi.Subtitle.HasSubtitle) {
+        var surl = $"http://{request.LocalEndPoint.Address}:{request.LocalEndPoint.Port}{prefix}subtitle/{resource.Id}/st.srt";
         var result = item.OwnerDocument;
         var srt = result.CreateElement("sec", "CaptionInfoEx", NS_SEC);
         var srttype = result.CreateAttribute("sec", "type", NS_SEC);
