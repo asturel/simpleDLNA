@@ -175,60 +175,9 @@ namespace NMaier.SimpleDlna.FileMediaServer
         cover = new Cover(v.Cover, aFile);
       }
 
-      //      try
-      //      {
-      //        Subtitle sub = null;
-      //        Model.Subtitle ssub = null;// v.Subtitles.FirstOrDefault();
-      //        try
-      //        {
-      //          if (ssub != null)
-      //          {
-      //            sub = new Subtitle(ssub.Data, ssub.Internal, ssub.Path, ssub.Modified);
-      //          }
-      //
-      //          if (sub != null && !string.IsNullOrEmpty(sub.subPath))
-      //          {
-      //            var finfo = new FileInfo(sub.subPath);
-      //
-      //            if (sub.InfoDate >= finfo.LastWriteTimeUtc)
-      //            {
-      //              subTitle = sub;
-      //            }
-      //            else
-      //            {
-      //              subTitle = new Subtitle(new FileInfo(this.Path), isInternalSubtitleASS);
-      //            }
-      //          }
-      //          else
-      //          {
-      //            if (sub != null && sub.isInternal)
-      //            {
-      //              subTitle = sub;
-      //            }
-      //            else
-      //            {
-      //              subTitle = new Subtitle(new System.IO.FileInfo(this.Path), isInternalSubtitleASS);
-      //            }
-      //          }
-      //        }
-      //        catch (Exception e)
-      //        {
-      //          subTitle = new Subtitle(new System.IO.FileInfo(this.Path), isInternalSubtitleASS);
-      //        }
-      //        //subTitle = new Subtitle(new System.IO.FileInfo(this.Path), sub);
-      //      }
-      //      catch (Exception)
-      //      {
-      //        subTitle = null;
-      //      }
-
       try
       {
         tvshowid = v.TVDBId;
-        //        if (tvshowid.HasValue && tvshowid.Value > 0)
-        //        {
-        //          FetchTV();
-        //        }
         if (!tvshowid.HasValue)
         {
           tvshowid = 0;
@@ -242,7 +191,6 @@ namespace NMaier.SimpleDlna.FileMediaServer
       }
       catch (Exception) { }
 
-      //Server.UpdateFileCache(this);
       initialized = true;
       if (shouldsave)
       {

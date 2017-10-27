@@ -1,4 +1,4 @@
-﻿using NMaier.SimpleDlna.Server;
+using NMaier.SimpleDlna.Server;
 using NMaier.SimpleDlna.Utilities;
 using System;
 using System.Collections.Generic;
@@ -496,7 +496,6 @@ namespace NMaier.SimpleDlna.FileMediaServer
         try
         {
           using (var conn = new Model.Store(info)) {
-            conn.Files.ToArray();
             tvStore = new TVStore(info);
           }
         } catch (Exception ex)
