@@ -1,4 +1,4 @@
-﻿using log4net;
+using log4net;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -56,11 +56,12 @@ namespace NMaier.SimpleDlna.Utilities
       var places = new List<DirectoryInfo>();
       places.Add(new FileInfo(
         Assembly.GetExecutingAssembly().Location).Directory);
-      try {
-        places.Add(new DirectoryInfo(
-          Environment.GetEnvironmentVariable("FFMPEG_HOME")));
-      }
-      catch (Exception) {
+      {
+        var ffmpegPath = Environment.GetEnvironmentVariable("FFMPEG_HOME");
+        if (!string.IsNullOrEmpty(ffmpegPath))
+        {
+          places.Add(new DirectoryInfo(ffmpegPath));
+        }
       }
       foreach (var l in specialLocations) {
         try {
