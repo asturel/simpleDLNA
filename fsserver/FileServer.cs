@@ -227,6 +227,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
           DebugFormat("Skipping change ({1}): {0}", e.FullPath, e.ChangeType);
           return;
         }
+        ids.Reset(e.FullPath);
 
         DebugFormat(
           "File System changed ({1}): {0}", e.FullPath, e.ChangeType);
@@ -265,6 +266,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
             return;
           }
         }
+        ids.Reset(e.FullPath);
         DebugFormat(
           "File System changed ({1}): {0}", e.FullPath, e.ChangeType);
         DelayedRescan(e.ChangeType);

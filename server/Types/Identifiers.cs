@@ -115,6 +115,35 @@ namespace NMaier.SimpleDlna.Server
       }
     }
 
+    public void Reset()
+    {
+      paths.Clear();
+      ids.Clear();
+    }
+
+    public void Reset(IMediaItem item)
+    {
+      string id = item?.Id;
+      if (!string.IsNullOrEmpty(id))
+      {
+        ids.Remove(id);
+        paths.Remove(id);
+      }
+    }
+
+    public void Reset(string spath)
+    {
+      var ext = System.IO.Path.GetExtension(spath);
+      var pathwithoutExt = spath.Substring(0, spath.Length-ext.Length);
+      var path = paths.Where(p => p.Key.StartsWith(pathwithoutExt)).ToArray();
+      foreach (var p in path)
+      {
+        Debug($"Resetting cache for: {p.Key} {p.Value}");
+        paths.Remove(p.Key);
+        ids.Remove(p.Value);
+      }
+    }
+
     public void Cleanup()
     {
       GC.Collect();
