@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -61,7 +61,7 @@ namespace NMaier
     }
   }
 
-  class TVStore
+  class TVStore : IDisposable
   {
     private readonly FileInfo DBPath;
 
@@ -293,6 +293,12 @@ namespace NMaier
     {
       CheckUpdates(false);
     }
+
+    public void Dispose()
+    {
+      updateTimer?.Dispose();
+    }
+
     public TVStore(FileInfo dbpath)
     {
       DBPath = dbpath;

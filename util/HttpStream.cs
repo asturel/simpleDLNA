@@ -1,4 +1,4 @@
-﻿using log4net;
+using log4net;
 using System;
 using System.IO;
 using System.Net;
@@ -42,10 +42,7 @@ namespace NMaier.SimpleDlna.Utilities
 
     public HttpStream(Uri uri, Uri referrer)
     {
-      if (uri == null) {
-        throw new ArgumentNullException("uri");
-      }
-      this.uri = uri;
+      this.uri = uri ?? throw new ArgumentNullException("uri");
       this.referrer = referrer;
     }
 

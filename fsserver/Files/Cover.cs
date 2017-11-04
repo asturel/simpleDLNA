@@ -1,4 +1,4 @@
-﻿using NMaier.SimpleDlna.Server;
+using NMaier.SimpleDlna.Server;
 using NMaier.SimpleDlna.Server.Metadata;
 using NMaier.SimpleDlna.Thumbnails;
 using NMaier.SimpleDlna.Utilities;
@@ -219,9 +219,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
       if (bytes == null) {
         bytes = new byte[0];
       }
-      if (OnCoverLazyLoaded != null) {
-        OnCoverLazyLoaded(this, null);
-      }
+      OnCoverLazyLoaded?.Invoke(this, null);
       return bytes;
     }
 

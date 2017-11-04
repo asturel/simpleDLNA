@@ -1,4 +1,4 @@
-﻿using NMaier.SimpleDlna.Server;
+using NMaier.SimpleDlna.Server;
 using NMaier.SimpleDlna.Server.Metadata;
 using NMaier.SimpleDlna.Utilities;
 using System;
@@ -32,10 +32,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
     public BaseFile(FileServer server, FileInfo file, DlnaMime type,
                        DlnaMediaTypes mediaType)
     {
-      if (server == null) {
-        throw new ArgumentNullException("server");
-      }
-      this.server = server;
+      this.server = server ?? throw new ArgumentNullException("server");
       Item = file;
 
       length = Item.Length;
