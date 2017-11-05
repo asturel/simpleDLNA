@@ -1,4 +1,4 @@
-﻿using log4net;
+using log4net;
 using NMaier.SimpleDlna.Utilities;
 using System;
 using System.IO;
@@ -175,8 +175,16 @@ namespace NMaier.SimpleDlna.Server
         {
           if (!string.IsNullOrEmpty(subPath))
           {
-            var ext = System.IO.Path.GetExtension(subPath.TrimStart('.'));
-            return DlnaMaps.Ext2Dlna[ext];
+            var ext = System.IO.Path.GetExtension(subPath).TrimStart('.').ToUpperInvariant();
+            switch (ext)
+            {
+              case "SSA": return DlnaMime.SubtitleSSA;
+              case "ASS": return DlnaMime.SubtitleASS;
+              case "SRT":
+              default: return DlnaMime.SubtitleSRT;
+                
+            }
+            //return DlnaMaps.Ext2Dlna[ext];
           }
         } catch (Exception e)
         {

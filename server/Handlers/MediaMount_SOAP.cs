@@ -127,8 +127,8 @@ namespace NMaier.SimpleDlna.Server
               prefix,
               resource.Id
           );
-          subtitle.SetAttribute("protocolInfo", "http-get:*:text/srt:*");
-          //subtitle.SetAttribute("protocolInfo", $"http-get:*:{DlnaMaps.Mime[resource.Type]}:*");
+          //subtitle.SetAttribute("protocolInfo", "http-get:*:text/srt:*"); // application/x-ass
+          subtitle.SetAttribute("protocolInfo", $"http-get:*:{DlnaMaps.Mime[video.Subtitle.Type]}:*");
           item.AppendChild(subtitle);
         }
       }
