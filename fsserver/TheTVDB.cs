@@ -74,7 +74,7 @@ namespace NMaier
         res = this.TVEpisodes.Find(ep => ep.Season == altseason && ep.Episode == altepisode);
       }
 
-      if (res == null)
+      if (res == null || String.IsNullOrEmpty(res.Title))
       {
         var up = TheTVDB.GetTVShowDetails(this.ID, true).Result.Item1;
         if (this.TVEpisodes.Count != up.TVEpisodes.Count)
