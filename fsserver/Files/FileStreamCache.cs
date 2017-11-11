@@ -82,6 +82,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
     {
       public Ticker() : base(10000)
       {
+        Enabled = true;
         Elapsed += (sender, args) => { Expire(); };
       }
     }
