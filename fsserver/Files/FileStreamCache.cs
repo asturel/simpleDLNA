@@ -21,8 +21,9 @@ namespace NMaier.SimpleDlna.FileMediaServer
     private static void Expire()
     {
       lock (streams) {
-        foreach (var item in streams.ToArray()) {
-          var diff = item.Value.InsertionPoint - DateTime.UtcNow;
+        var x = streams.ToArray();
+        foreach (var item in x) {
+          var diff = DateTime.UtcNow - item.Value.InsertionPoint;
           if (diff.TotalSeconds > 5) {
             item.Value.Stream?.Kill();
             streams.Remove(item.Key);

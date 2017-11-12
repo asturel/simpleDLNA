@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -162,7 +162,10 @@ namespace NMaier.SimpleDlna.Utilities
 
     public void CopyTo(KeyValuePair<TKey, TValue>[] array, int arrayIndex)
     {
-      throw new NotImplementedException();
+      foreach (var item in items.Values)
+      {
+        array[arrayIndex++] = new KeyValuePair<TKey, TValue>(item.Value.Key, item.Value.Value);
+      }
     }
 
     public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
