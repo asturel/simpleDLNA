@@ -13,13 +13,20 @@ namespace NMaier.SimpleDlna.FileMediaServer
 
     private static BlockingCollection<Item> CreateQueue()
     {
-      for (var i = 0; i < 4; ++i) {
-        new Thread(Run) {
-          IsBackground = true,
-          Priority = ThreadPriority.Lowest
-        }.Start();
-      }
+      new Thread(() =>
+      {
+        Thread.Sleep(20000);
+        for (var i = 0; i < 4; ++i)
+        {
+          new Thread(Run)
+          {
+            IsBackground = true,
+            Priority = ThreadPriority.Lowest
+          }.Start();
+        }
 
+      })
+      { IsBackground = true }.Start();
       return new BlockingCollection<Item>(new ConcurrentQueue<Item>());
     }
 
@@ -28,21 +35,27 @@ namespace NMaier.SimpleDlna.FileMediaServer
       var logger = log4net.LogManager.GetLogger(typeof(BackgroundCacher));
       logger.Debug("started");
       var loadedSubTitles = 0ul;
-      try {
-        for (; ; ) {
-          if (queue == null) {
+      try
+      {
+        for (; ; )
+        {
+          if (queue == null)
+          {
             Thread.Sleep(100);
             continue;
           }
           var item = queue.Take();
           var store = item.Store.Target as FileStore;
           var file = item.File.Target as BaseFile;
-          if (store == null || file == null) {
+          if (store == null || file == null)
+          {
             continue;
           }
-          try {
+          try
+          {
             var mvi = file as IMetaVideoItem;
-            if (mvi != null && mvi.Subtitle.HasSubtitle) {
+            if (mvi != null && mvi.Subtitle.HasSubtitle)
+            {
               loadedSubTitles++;
             }
             //var x = file.Cover;
@@ -51,15 +64,18 @@ namespace NMaier.SimpleDlna.FileMediaServer
             //  continue;
             //}
             file.LoadCover();
-            using (var k = file.Cover.CreateContentStream()) {
+            using (var k = file.Cover.CreateContentStream())
+            {
               k.ReadByte();
             }
           }
-          catch (Exception) {
+          catch (Exception)
+          {
           }
         }
       }
-      finally {
+      finally
+      {
         logger.DebugFormat("stopped subtitles: {0}", loadedSubTitles);
       }
     }
@@ -68,7 +84,8 @@ namespace NMaier.SimpleDlna.FileMediaServer
                                 IEnumerable<WeakReference> items)
     {
       var storeRef = new WeakReference(store);
-      foreach (var i in items) {
+      foreach (var i in items)
+      {
         queue.Add(new Item(storeRef, i));
       }
     }
