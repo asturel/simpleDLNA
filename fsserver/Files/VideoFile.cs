@@ -77,6 +77,10 @@ namespace NMaier.SimpleDlna.FileMediaServer
         {
           this.tvshowid = TheTVDB.GetTVShowID(this.Path).Result;
         }
+        if (base.Path.Contains("Rick.and.Morty.S01.720p.BluRay.x264.HUN.ENG-nIk"))
+        {
+          Console.WriteLine();
+        }
         var steszt = (Directory.GetParent(base.Path).Name).TryGetName();
         if (steszt == null || (steszt is Formatting.NiceSeriesName && (steszt as Formatting.NiceSeriesName).Episode == 0))
         {
@@ -135,7 +139,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
           var n = steszt as Formatting.MovieName;
           this.seriesname = string.Format("{0} ({1})", n.Name, n.Year);
         }
-        else
+        else if (string.IsNullOrEmpty(seriesname))
         {
           this.seriesname = Directory.GetParent(this.Path).Name;
         }
@@ -509,7 +513,7 @@ namespace NMaier.SimpleDlna.FileMediaServer
     {
       MaybeInit();
       base.GetData(store, v);
-      v.Actors = string.Join(",", actors);
+      v.Actors = string.Join(",", actors ?? new string[] { });
       v.Description = description;
       v.Director = director;
       v.Genre = genre;
