@@ -2,6 +2,7 @@ using log4net;
 using NMaier.SimpleDlna.Utilities;
 using System;
 using System.IO;
+using System.Linq;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -29,6 +30,10 @@ namespace NMaier.SimpleDlna.Server
 
     [NonSerialized]
     private static Regex stylingRegex = new Regex(@"^<font.*?>(.*?)</font>$", RegexOptions.Multiline | RegexOptions.Singleline | RegexOptions.Compiled);
+
+    [NonSerialized]
+    private static Regex subclear = new Regex("({.+?}|\\[.+?\\]|<.+?>)", RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Multiline);
+
 
     private Lazy<string> text = null;
 
@@ -106,12 +111,15 @@ namespace NMaier.SimpleDlna.Server
     {
       get
       {
-        try {
-          using (var s = CreateContentStream()) {
+        try
+        {
+          using (var s = CreateContentStream())
+          {
             return s.Length;
           }
         }
-        catch (Exception) {
+        catch (Exception)
+        {
           return null;
         }
       }
@@ -147,7 +155,8 @@ namespace NMaier.SimpleDlna.Server
       {
         var rv = new RawHeaders();
         rv.Add("Type", Type.ToString());
-        if (InfoSize.HasValue) {
+        if (InfoSize.HasValue)
+        {
           rv.Add("SizeRaw", InfoSize.ToString());
           rv.Add("Size", InfoSize.Value.FormatFileSize());
         }
@@ -182,11 +191,12 @@ namespace NMaier.SimpleDlna.Server
               case "ASS": return DlnaMime.SubtitleASS;
               case "SRT":
               default: return DlnaMime.SubtitleSRT;
-                
+
             }
             //return DlnaMaps.Ext2Dlna[ext];
           }
-        } catch (Exception e)
+        }
+        catch (Exception e)
         {
           logger.Error("Subtitle Type error", e);
         }
@@ -215,62 +225,113 @@ namespace NMaier.SimpleDlna.Server
       }
     }
 
+    private string CleanSubtitle(string text)
+    {
+      using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(text ?? "")))
+      {
+        var parser = new SubtitlesParser.Classes.Parsers.SubParser();
+        var items = parser.ParseStream(stream, Encoding.UTF8);
+        int endtime = -1;
+        for (int i = 0; i < items.Count; i++)
+        {
+          var item = items[i];
+          for (int j = 0; j < item.Lines.Count; j++)
+          {
+            item.Lines[j] = subclear.Replace(item.Lines[j], "").Trim();
+          }
+
+          if (item.StartTime < endtime && i > 0)
+          {
+            logger.Warn($"Subtitle overlap: {subPath} ({i})");
+            items[i - 1].EndTime = item.StartTime - 1;
+          }
+          endtime = item.EndTime;
+
+        }
+        int k = 0;
+        return String.Join("\r\n\r\n", items.Where(item => item.Lines.Any(l => l.Length > 0)).Select(item =>
+        {
+          var startTs = new TimeSpan(0, 0, 0, 0, item.StartTime);
+          var endTs = new TimeSpan(0, 0, 0, 0, item.EndTime);
+
+          var res = string.Format("{3}\r\n{0} --> {1}\r\n{2}", startTs.ToString(@"hh\:mm\:ss\,fff"), endTs.ToString(@"hh\:mm\:ss\,fff"), string.Join(Environment.NewLine, item.Lines.Where(l => l.Length > 0)), ++k);
+
+          return res;
+        }));
+      }
+    }
+
     private void Load(FileInfo file, bool hasASSSub)
     {
-      try {
+      try
+      {
         // Try external
-        foreach (var i in exts) {
+        foreach (var i in exts)
+        {
           var sti = new FileInfo(
             System.IO.Path.ChangeExtension(file.FullName, i));
-          try {
-            if (!sti.Exists) {
+          try
+          {
+            if (!sti.Exists)
+            {
               sti = new FileInfo(file.FullName + i);
             }
-            if (!sti.Exists) {
+            if (!sti.Exists)
+            {
               continue;
             }
             //text = System.IO.File.ReadAllText(sti.FullName,System.Text.Encoding.GetEncoding("iso-8859-2")); //FFmpeg.GetSubtitleSubrip(sti);
             Encoding encoding = null;
-            try {
+            try
+            {
               encoding = GetEncoding(sti.FullName);
-            } catch (Exception e)
+            }
+            catch (Exception e)
             {
               logger.Error("Encoding", e);
-              encoding = System.Text.Encoding.GetEncoding("iso-8859-2");
+              encoding = Encoding.GetEncoding("iso-8859-2");
             }
             // fallback
             if (encoding == null)
             {
-              encoding = System.Text.Encoding.GetEncoding("iso-8859-2");
+              encoding = Encoding.GetEncoding("iso-8859-2");
             }
-            text = new Lazy<string>(() => Encoding.UTF8.GetString(Encoding.Convert(encoding, Encoding.UTF8, (File.ReadAllBytes(sti.FullName)))));
+            text = new Lazy<string>(() => CleanSubtitle(Encoding.UTF8.GetString(Encoding.Convert(encoding, Encoding.UTF8, (File.ReadAllBytes(sti.FullName))))));
             subPath = sti.FullName;
             lastmodified = sti.LastWriteTimeUtc;
           }
-          catch (NotSupportedException) {
+          catch (NotSupportedException)
+          {
           }
-          catch (Exception ex) {
+          catch (Exception ex)
+          {
             logger.Warn(string.Format(
               "Failed to get subtitle from {0}", sti.FullName), ex);
           }
         }
-        try {
+        try
+        {
           if (text == null && hasASSSub)
           {
             logger.Info(string.Format("Extracting subtitle from {0}", file.FullName));
-            text = new Lazy<string>(() => stylingRegex.Replace(FFmpeg.GetSubtitleSubrip(file),"$1"));
+            //text = new Lazy<string>(() => stylingRegex.Replace(FFmpeg.GetSubtitleSubrip(file), "$1"));
+            text = new Lazy<string>(() => CleanSubtitle(FFmpeg.GetSubtitleSubrip(file)));
+            
             isInternal = true;
           }
 
         }
-        catch (NotSupportedException) {
+        catch (NotSupportedException)
+        {
         }
-        catch (Exception ex) {
+        catch (Exception ex)
+        {
           logger.Warn(string.Format(
             "Failed to get subtitle from {0}", file.FullName), ex);
         }
       }
-      catch (Exception ex) {
+      catch (Exception ex)
+      {
         logger.Error(string.Format(
           "Failed to load subtitle for {0}", file.FullName), ex);
       }
@@ -283,10 +344,12 @@ namespace NMaier.SimpleDlna.Server
 
     public Stream CreateContentStream()
     {
-      if (!HasSubtitle) {
+      if (!HasSubtitle)
+      {
         throw new NotSupportedException();
       }
-      if (encodedText == null) {
+      if (encodedText == null)
+      {
         encodedText = Encoding.UTF8.GetBytes(text.Value);
       }
       return new MemoryStream(encodedText, false);
