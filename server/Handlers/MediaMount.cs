@@ -1,4 +1,4 @@
-﻿using NMaier.SimpleDlna.Server.Metadata;
+using NMaier.SimpleDlna.Server.Metadata;
 using NMaier.SimpleDlna.Utilities;
 using System;
 using System.Collections.Generic;
@@ -32,8 +32,8 @@ namespace NMaier.SimpleDlna.Server
     {
       server = aServer;
       prefix = String.Format("/mm-{0}/", ++mount);
-      var vms = server as IVolatileMediaServer;
-      if (vms != null) {
+      if (server is IVolatileMediaServer vms)
+      {
         vms.Changed += ChangedServer;
       }
     }
