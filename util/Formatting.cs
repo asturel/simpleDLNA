@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Linq;
@@ -159,14 +159,14 @@ namespace NMaier.SimpleDlna.Utilities
 
       if (releaser.Success)
       {
-        resultionText = releaser.Groups[1].Value;
+        releaserText = releaser.Groups[1].Value;
       } else
       {
 
       }
       if (resolution.Success)
       {
-        releaserText = resolution.Groups[1].Value;
+        resultionText = resolution.Groups[1].Value;
       }
 
 
