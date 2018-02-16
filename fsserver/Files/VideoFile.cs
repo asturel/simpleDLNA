@@ -77,10 +77,6 @@ namespace NMaier.SimpleDlna.FileMediaServer
         {
           this.tvshowid = TheTVDB.GetTVShowID(this.Path).Result;
         }
-        if (base.Path.Contains("Rick.and.Morty.S01.720p.BluRay.x264.HUN.ENG-nIk"))
-        {
-          Console.WriteLine();
-        }
         var steszt = (Directory.GetParent(base.Path).Name).TryGetName();
         if (steszt == null || (steszt is Formatting.NiceSeriesName && (steszt as Formatting.NiceSeriesName).Episode == 0))
         {
