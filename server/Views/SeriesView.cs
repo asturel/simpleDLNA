@@ -132,7 +132,7 @@ namespace NMaier.SimpleDlna.Server.Views
       foreach (var c in root.AllItems.ToList())
       {
         var c0 = c as IMediaVideoResource;
-        var folder = (c0 != null && c0.IsSeries ? series : movies).GetFolder(c0 != null ? c0.MovieTitle : c.Title);
+        var folder = (c0?.IsSeries ?? false ? series : movies).GetFolder(c0?.MovieTitle ?? c.Title);
         //var folder = new DoubleKeyedVirtualFolder((c0 != null && c0.IsSeries ? series : movies),(c0 != null ? c0.MovieTitle : c.Title) );
         if (c0.Progress <= 85)
         {

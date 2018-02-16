@@ -123,8 +123,8 @@ namespace NMaier.SimpleDlna.Utilities
       if (file == null) {
         throw new ArgumentNullException("file");
       }
-      IDictionary<string, string> rv;
-      if (infoCache.TryGetValue(file, out rv)) {
+      if (infoCache.TryGetValue(file, out IDictionary<string, string> rv))
+      {
         return rv;
       }
       try {
@@ -168,12 +168,13 @@ namespace NMaier.SimpleDlna.Utilities
             var output = reader.ReadToEnd();
             var match = regDuration.Match(output);
             if (match != null && match.Success) {
-              int h, m, s, ms;
-              if (int.TryParse(match.Groups[1].Value, out h) &&
-                int.TryParse(match.Groups[2].Value, out m) &&
-                int.TryParse(match.Groups[3].Value, out s)) {
+              if (int.TryParse(match.Groups[1].Value, out int h) &&
+                int.TryParse(match.Groups[2].Value, out int m) &&
+                int.TryParse(match.Groups[3].Value, out int s))
+              {
                 if (match.Groups.Count < 5 ||
-                    !int.TryParse(match.Groups[4].Value, out ms)) {
+                    !int.TryParse(match.Groups[4].Value, out int ms))
+                {
                   ms = 0;
                 }
                 var ts = new TimeSpan(0, h, m, s, ms * 10);
@@ -184,9 +185,9 @@ namespace NMaier.SimpleDlna.Utilities
             }
             match = regDimensions.Match(output);
             if (match != null && match.Success) {
-              int w, h;
-              if (int.TryParse(match.Groups[1].Value, out w) &&
-                int.TryParse(match.Groups[2].Value, out h)) {
+              if (int.TryParse(match.Groups[1].Value, out int w) &&
+                int.TryParse(match.Groups[2].Value, out int h))
+              {
                 rv.Add("VIDEO_WIDTH", w.ToString());
                 rv.Add("VIDEO_HEIGHT", h.ToString());
               }
@@ -202,13 +203,12 @@ namespace NMaier.SimpleDlna.Utilities
 
     public static Size GetFileDimensions(FileInfo file)
     {
-      string sw, sh;
-      int w, h;
-      if (IdentifyFile(file).TryGetValue("VIDEO_WIDTH", out sw)
-        && IdentifyFile(file).TryGetValue("VIDEO_HEIGHT", out sh)
-        && int.TryParse(sw, out w)
-        && int.TryParse(sh, out h)
-        && w > 0 && h > 0) {
+      if (IdentifyFile(file).TryGetValue("VIDEO_WIDTH", out string sw)
+        && IdentifyFile(file).TryGetValue("VIDEO_HEIGHT", out string sh)
+        && int.TryParse(sw, out int w)
+        && int.TryParse(sh, out int h)
+        && w > 0 && h > 0)
+      {
         return new Size(w, h);
       }
       throw new NotSupportedException();
@@ -216,13 +216,13 @@ namespace NMaier.SimpleDlna.Utilities
 
     public static double GetFileDuration(FileInfo file)
     {
-      string sl;
-      if (FFmpeg.IdentifyFile(file).TryGetValue("LENGTH", out sl)) {
-        double dur;
+      if (FFmpeg.IdentifyFile(file).TryGetValue("LENGTH", out string sl))
+      {
         bool valid = Double.TryParse(
           sl, NumberStyles.AllowDecimalPoint,
-          CultureInfo.GetCultureInfo("en-US", "en"), out dur);
-        if (valid && dur > 0) {
+          CultureInfo.GetCultureInfo("en-US", "en"), out double dur);
+        if (valid && dur > 0)
+        {
           return dur;
         }
       }
